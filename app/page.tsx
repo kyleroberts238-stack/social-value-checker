@@ -630,14 +630,18 @@ export default function Page() {
       ]
     : [];
 
-  function toggleRecommendedAsset(asset: RecommendedAsset) {
-    if (!asset.key) return;
-    setPoiToggles((prev) => ({
-      ...prev,
-      [asset.key]: !prev[asset.key],
-    }));
-    setMapPanelTab("assets");
-  }
+function toggleRecommendedAsset(asset: RecommendedAsset) {
+  if (!asset.key) return;
+
+  const key = asset.key;
+
+  setPoiToggles((prev) => ({
+    ...prev,
+    [key]: !prev[key],
+  }));
+
+  setMapPanelTab("assets");
+}
 
   return (
     <main style={{ background: "#00285B" }} className="min-h-screen p-10">
