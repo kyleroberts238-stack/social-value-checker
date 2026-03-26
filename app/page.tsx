@@ -474,9 +474,10 @@ export default function Page() {
   const [selectedLookupRow, setSelectedLookupRow] = useState<LookupRow | null>(
     null
   );
-  const [siteCoords, setSiteCoords] = useState<{ lng: number; lat: number } | null>(
-    null
-  );
+  const [siteCoords, setSiteCoords] = useState<{
+    lng: number;
+    lat: number;
+  } | null>(null);
   const [siteNearestPostcode, setSiteNearestPostcode] = useState<string | null>(
     null
   );
@@ -630,43 +631,55 @@ export default function Page() {
       ]
     : [];
 
-function toggleRecommendedAsset(asset: RecommendedAsset) {
-  if (!asset.key) return;
+  function toggleRecommendedAsset(asset: RecommendedAsset) {
+    if (!asset.key) return;
 
-  const key = asset.key;
+    const key = asset.key;
 
-  setPoiToggles((prev) => ({
-    ...prev,
-    [key]: !prev[key],
-  }));
+    setPoiToggles((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
 
-  setMapPanelTab("assets");
-}
+    setMapPanelTab("assets");
+  }
+
+  const baseButtonClass =
+    "rounded-xl px-4 py-2.5 text-sm font-medium transition-colors";
+  const activeButtonStyle = { background: "#00285B", color: "white" };
+  const inactiveButtonStyle = { background: "#2fa4df", color: "white" };
 
   return (
-    <main style={{ background: "#00285B" }} className="min-h-screen p-10">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between gap-4 mb-8">
-          <img src="/logo.png" alt="MapHorizon Logo" style={{ height: 60 }} />
-          <div className="text-right ml-auto">
-            <h1 className="text-4xl font-bold text-white">
+    <main style={{ background: "#00285B" }} className="min-h-screen px-3 py-4 md:px-6 md:py-8">
+      <div className="mx-auto max-w-7xl">
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between md:mb-8">
+          <img
+            src="/logo.png"
+            alt="MapHorizon Logo"
+            className="h-10 w-auto md:h-[60px]"
+          />
+
+          <div className="text-left sm:ml-auto sm:text-right">
+            <h1 className="text-2xl font-bold leading-tight text-white md:text-4xl">
               Social Value Opportunity Checker
             </h1>
-            <div className="text-blue-100">
+            <div className="text-sm text-blue-100 md:text-base">
               Powered by MapHorizon Geospatial Intelligence
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-md mb-6">
-          <div className="flex gap-2 mb-4">
+        <div className="mb-6 rounded-2xl bg-white p-4 shadow-md md:p-6">
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <button
               type="button"
               onClick={() => setLookupMode("postcode")}
-              className="px-4 py-2 rounded-lg text-white"
-              style={{
-                background: lookupMode === "postcode" ? "#00285B" : "#2fa4df",
-              }}
+              className={`${baseButtonClass} w-full sm:w-auto`}
+              style={
+                lookupMode === "postcode"
+                  ? activeButtonStyle
+                  : inactiveButtonStyle
+              }
             >
               Postcode Lookup
             </button>
@@ -674,10 +687,10 @@ function toggleRecommendedAsset(asset: RecommendedAsset) {
             <button
               type="button"
               onClick={() => setLookupMode("site")}
-              className="px-4 py-2 rounded-lg text-white"
-              style={{
-                background: lookupMode === "site" ? "#00285B" : "#2fa4df",
-              }}
+              className={`${baseButtonClass} w-full sm:w-auto`}
+              style={
+                lookupMode === "site" ? activeButtonStyle : inactiveButtonStyle
+              }
             >
               Site Lookup
             </button>
@@ -689,58 +702,64 @@ function toggleRecommendedAsset(asset: RecommendedAsset) {
                 e.preventDefault();
                 searchPostcode();
               }}
-              className="flex gap-3"
+              className="flex flex-col gap-3 sm:flex-row"
             >
               <input
                 value={postcode}
                 onChange={(e) => setPostcode(e.target.value)}
                 placeholder="Enter CH postcode"
-                className="flex-1 border rounded-xl px-4 py-3"
+                className="flex-1 rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
               />
               <button
                 type="submit"
                 style={{ background: "#2fa4df" }}
-                className="text-white px-5 py-3 rounded-xl"
+                className="w-full rounded-xl px-5 py-3 text-sm font-medium text-white sm:w-auto"
               >
                 Check Opportunity
               </button>
             </form>
           ) : (
-            <div className="rounded-xl bg-slate-50 px-4 py-4 text-slate-700 text-sm">
-              Click anywhere on the map to select a site location and run screening.
+            <div className="rounded-xl bg-slate-50 px-4 py-4 text-sm text-slate-700">
+              Click anywhere on the map to select a site location and run
+              screening.
             </div>
           )}
         </div>
 
         {loading && (
-          <div className="bg-white p-6 rounded-2xl shadow-md">Loading data...</div>
+          <div className="rounded-2xl bg-white p-4 shadow-md md:p-6">
+            Loading data...
+          </div>
         )}
 
         {!loading && (
-          <div className="grid lg:grid-cols-[1.02fr_0.98fr] gap-6 items-start">
+          <div className="grid items-start gap-4 lg:grid-cols-[1.02fr_0.98fr] md:gap-6">
             <div className="flex flex-col">
-              <div className="rounded-2xl overflow-hidden shadow-md bg-white">
-                <MapView
-                  lat={selectedPoint.lat}
-                  lng={selectedPoint.lng}
-                  mapLayer={mapLayer}
-                  popupData={selectedLsoaProps}
-                  poiToggles={poiToggles}
-                  lookupMode={lookupMode}
-                  onSiteSelect={(coords) => setSiteCoords(coords)}
-                />
+              <div className="overflow-hidden rounded-2xl bg-white shadow-md">
+                <div className="h-[40vh] min-h-[300px] max-h-[430px] md:h-[70vh]">
+                  <MapView
+                    lat={selectedPoint.lat}
+                    lng={selectedPoint.lng}
+                    mapLayer={mapLayer}
+                    popupData={selectedLsoaProps}
+                    poiToggles={poiToggles}
+                    lookupMode={lookupMode}
+                    onSiteSelect={(coords) => setSiteCoords(coords)}
+                  />
+                </div>
               </div>
 
-              <div className="bg-white p-4 mt-3 rounded-2xl shadow-md text-sm">
-                <div className="flex gap-2 mb-3 flex-wrap">
+              <div className="mt-3 rounded-2xl bg-white p-4 text-sm shadow-md">
+                <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                   <button
                     type="button"
                     onClick={() => setMapPanelTab("layers")}
-                    className="px-3 py-2 rounded-lg text-white"
-                    style={{
-                      background:
-                        mapPanelTab === "layers" ? "#00285B" : "#2fa4df",
-                    }}
+                    className={`${baseButtonClass} w-full sm:w-auto`}
+                    style={
+                      mapPanelTab === "layers"
+                        ? activeButtonStyle
+                        : inactiveButtonStyle
+                    }
                   >
                     Layers
                   </button>
@@ -748,11 +767,12 @@ function toggleRecommendedAsset(asset: RecommendedAsset) {
                   <button
                     type="button"
                     onClick={() => setMapPanelTab("assets")}
-                    className="px-3 py-2 rounded-lg text-white"
-                    style={{
-                      background:
-                        mapPanelTab === "assets" ? "#00285B" : "#2fa4df",
-                    }}
+                    className={`${baseButtonClass} w-full sm:w-auto`}
+                    style={
+                      mapPanelTab === "assets"
+                        ? activeButtonStyle
+                        : inactiveButtonStyle
+                    }
                   >
                     Assets
                   </button>
@@ -760,9 +780,9 @@ function toggleRecommendedAsset(asset: RecommendedAsset) {
 
                 {mapPanelTab === "layers" && (
                   <div>
-                    <div className="font-semibold mb-2">Map Layer</div>
+                    <div className="mb-2 font-semibold">Map Layer</div>
 
-                    <div className="flex gap-2 flex-wrap">
+                    <div className="flex flex-wrap gap-2">
                       {[
                         ["none", "Base Map"],
                         ["imd", "IMD"],
@@ -775,12 +795,14 @@ function toggleRecommendedAsset(asset: RecommendedAsset) {
                       ].map(([value, label]) => (
                         <button
                           key={value}
+                          type="button"
                           onClick={() => setMapLayer(value as MapLayer)}
-                          className="px-3 py-2 rounded-lg text-white"
-                          style={{
-                            background:
-                              mapLayer === value ? "#00285B" : "#2fa4df",
-                          }}
+                          className={baseButtonClass}
+                          style={
+                            mapLayer === value
+                              ? activeButtonStyle
+                              : inactiveButtonStyle
+                          }
                         >
                           {label}
                         </button>
@@ -788,18 +810,17 @@ function toggleRecommendedAsset(asset: RecommendedAsset) {
                     </div>
 
                     <div className="mt-3 rounded-xl bg-slate-50 px-3 py-3 text-slate-700">
-                      <strong>Layer Description:</strong>{" "}
-                      {layerDescription(mapLayer)}
+                      <strong>Layer Description:</strong> {layerDescription(mapLayer)}
                     </div>
                   </div>
                 )}
 
                 {mapPanelTab === "assets" && (
                   <div>
-                    <div className="font-semibold mb-2">Community Assets</div>
+                    <div className="mb-2 font-semibold">Community Assets</div>
 
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <label className="flex items-center gap-2">
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <label className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
                         <input
                           type="checkbox"
                           checked={poiToggles.skills}
@@ -813,7 +834,7 @@ function toggleRecommendedAsset(asset: RecommendedAsset) {
                         Skills Providers
                       </label>
 
-                      <label className="flex items-center gap-2">
+                      <label className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
                         <input
                           type="checkbox"
                           checked={poiToggles.youth}
@@ -827,7 +848,7 @@ function toggleRecommendedAsset(asset: RecommendedAsset) {
                         Youth Provision
                       </label>
 
-                      <label className="flex items-center gap-2">
+                      <label className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
                         <input
                           type="checkbox"
                           checked={poiToggles.community}
@@ -841,7 +862,7 @@ function toggleRecommendedAsset(asset: RecommendedAsset) {
                         Community Centres
                       </label>
 
-                      <label className="flex items-center gap-2">
+                      <label className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
                         <input
                           type="checkbox"
                           checked={poiToggles.foodbanks}
@@ -855,7 +876,7 @@ function toggleRecommendedAsset(asset: RecommendedAsset) {
                         Foodbanks
                       </label>
 
-                      <label className="flex items-center gap-2">
+                      <label className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
                         <input
                           type="checkbox"
                           checked={poiToggles.gps}
@@ -869,7 +890,7 @@ function toggleRecommendedAsset(asset: RecommendedAsset) {
                         GP Surgeries
                       </label>
 
-                      <label className="flex items-center gap-2">
+                      <label className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
                         <input
                           type="checkbox"
                           checked={poiToggles.hospitals}
@@ -883,7 +904,7 @@ function toggleRecommendedAsset(asset: RecommendedAsset) {
                         Hospitals
                       </label>
 
-                      <label className="flex items-center gap-2">
+                      <label className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 sm:col-span-2">
                         <input
                           type="checkbox"
                           checked={poiToggles.schools}
@@ -901,14 +922,72 @@ function toggleRecommendedAsset(asset: RecommendedAsset) {
                 )}
               </div>
 
-              <div className="bg-white p-4 mt-3 rounded-2xl shadow-md text-sm">
+              {hasSelection && (
+                <div className="mt-3 rounded-2xl bg-white p-4 text-sm shadow-md lg:hidden">
+                  <strong>Local Partners</strong>
+                  <div className="mt-2 text-sm text-slate-600">
+                    Based on the strongest local themes, these are the most
+                    relevant assets to review and, where appropriate, turn on in
+                    the map.
+                  </div>
+
+                  <div className="mt-3 space-y-3">
+                    {recommendedAssets.map((asset) => {
+                      const isToggleable = Boolean(asset.key);
+                      const isOn = asset.key ? poiToggles[asset.key] : false;
+
+                      return (
+                        <div
+                          key={asset.label}
+                          className="rounded-xl border border-slate-200 bg-slate-50 p-3"
+                        >
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                              <div className="font-semibold">{asset.label}</div>
+                              <div className="mt-1 text-sm text-slate-600">
+                                {asset.reason}
+                              </div>
+                            </div>
+
+                            {isToggleable ? (
+                              <button
+                                type="button"
+                                onClick={() => toggleRecommendedAsset(asset)}
+                                className="w-full shrink-0 rounded-lg px-3 py-2 text-sm text-white sm:w-auto"
+                                style={{
+                                  background: isOn ? "#00285B" : "#2fa4df",
+                                }}
+                              >
+                                {isOn ? "Hide On Map" : "Show On Map"}
+                              </button>
+                            ) : (
+                              <div className="w-full shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-center text-xs text-slate-500 sm:w-auto">
+                                Reference Layer
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="mt-3 text-sm text-slate-600">
+                    This links <strong>priority themes</strong> to
+                    <strong> local delivery assets</strong>, making the output
+                    more practical for TOMS-aligned interventions, partnerships
+                    and bids.
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-3 rounded-2xl bg-white p-4 text-sm shadow-md lg:hidden">
                 <strong>Legend</strong>
 
                 {mapLayer !== "none" && (
                   <div className="mt-3">
-                    <div className="font-semibold mb-2">Map Legend</div>
+                    <div className="mb-2 font-semibold">Map Legend</div>
 
-                    <div className="flex gap-4 flex-wrap">
+                    <div className="flex flex-wrap gap-3">
                       {(mapLayer === "imd" ||
                         mapLayer === "income" ||
                         mapLayer === "employment" ||
@@ -916,8 +995,7 @@ function toggleRecommendedAsset(asset: RecommendedAsset) {
                         mapLayer === "health") && (
                         <>
                           <span>
-                            <span style={{ color: "#7f1d1d" }}>■</span> Higher
-                            Need
+                            <span style={{ color: "#7f1d1d" }}>■</span> Higher Need
                           </span>
                           <span>
                             <span style={{ color: "#f97316" }}>■</span> Medium
@@ -962,10 +1040,8 @@ function toggleRecommendedAsset(asset: RecommendedAsset) {
 
                 {activePoiLegend.length > 0 && (
                   <div className="mt-3">
-                    <div className="font-semibold mb-2">
-                      Community Asset Legend
-                    </div>
-                    <div className="flex gap-4 flex-wrap">
+                    <div className="mb-2 font-semibold">Community Asset Legend</div>
+                    <div className="flex flex-wrap gap-3">
                       {activePoiLegend.map((item) => (
                         <span key={item.label}>
                           <span style={{ color: item.color }}>●</span> {item.label}
@@ -976,74 +1052,20 @@ function toggleRecommendedAsset(asset: RecommendedAsset) {
                 )}
 
                 {mapLayer === "none" && activePoiLegend.length === 0 && (
-                  <div className="text-slate-600 mt-2">
+                  <div className="mt-2 text-slate-600">
                     Turn on a map layer or community asset to populate the legend.
                   </div>
                 )}
               </div>
-
-              {hasSelection && (
-                <div className="bg-white p-4 mt-3 rounded-2xl shadow-md text-sm">
-                  <strong>Local Partners</strong>
-                  <div className="text-sm text-slate-600 mt-2">
-                    Based on the strongest local themes, these are the most relevant
-                    assets to review and, where appropriate, turn on in the map.
-                  </div>
-
-                  <div className="mt-3 space-y-3">
-                    {recommendedAssets.map((asset) => {
-                      const isToggleable = Boolean(asset.key);
-                      const isOn = asset.key ? poiToggles[asset.key] : false;
-
-                      return (
-                        <div
-                          key={asset.label}
-                          className="rounded-xl border border-slate-200 bg-slate-50 p-3"
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <div className="font-semibold">{asset.label}</div>
-                              <div className="text-sm text-slate-600 mt-1">
-                                {asset.reason}
-                              </div>
-                            </div>
-
-                            {isToggleable ? (
-                              <button
-                                type="button"
-                                onClick={() => toggleRecommendedAsset(asset)}
-                                className="shrink-0 px-3 py-2 rounded-lg text-white text-sm"
-                                style={{
-                                  background: isOn ? "#00285B" : "#2fa4df",
-                                }}
-                              >
-                                {isOn ? "Hide On Map" : "Show On Map"}
-                              </button>
-                            ) : (
-                              <div className="shrink-0 text-xs text-slate-500 rounded-lg bg-white px-3 py-2 border border-slate-200">
-                                Reference Layer
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  <div className="text-sm text-slate-600 mt-3">
-                    This links <strong>priority themes</strong> to
-                    <strong> local delivery assets</strong>, making the output more
-                    practical for TOMS-aligned interventions, partnerships and bids.
-                  </div>
-                </div>
-              )}
             </div>
 
-            <div className="bg-white p-6 rounded-2xl shadow-md">
-              <h2 className="text-2xl font-semibold mb-3">{selectedAreaLabel}</h2>
+            <div className="rounded-2xl bg-white p-4 shadow-md md:p-6">
+              <h2 className="mb-3 break-words text-xl font-semibold md:text-2xl">
+                {selectedAreaLabel}
+              </h2>
 
               {hasSelection && (
-                <div className="text-sm mb-4">
+                <div className="mb-4 text-sm">
                   {lookupMode === "postcode" ? (
                     <>
                       <div>
@@ -1077,7 +1099,7 @@ function toggleRecommendedAsset(asset: RecommendedAsset) {
               )}
 
               {!scores && (
-                <div className="rounded-xl bg-slate-50 p-4 text-slate-700 text-sm">
+                <div className="rounded-xl bg-slate-50 p-4 text-sm text-slate-700">
                   {lookupMode === "postcode"
                     ? "Enter a postcode and run the lookup."
                     : "Click a site location on the map to run screening."}
@@ -1088,26 +1110,32 @@ function toggleRecommendedAsset(asset: RecommendedAsset) {
                 <>
                   <div
                     style={{ background: "#00285B" }}
-                    className="text-white p-4 rounded-xl mb-4"
+                    className="mb-4 rounded-xl p-4 text-white"
                   >
-                    Overall Materiality
-                    <div className="text-3xl font-bold">
+                    <div className="text-sm font-medium uppercase tracking-wide text-blue-100">
+                      Overall Materiality
+                    </div>
+                    <div className="mt-1 text-3xl font-bold">
                       {scores.overallMateriality}/100
                     </div>
-                    {band(scores.overallMateriality)}
+                    <div className="mt-1 text-sm">{band(scores.overallMateriality)}</div>
                   </div>
 
                   <div className="mb-5">
                     <strong>Theme Scores</strong>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                    <div className="mt-3 grid grid-cols-2 gap-3">
                       {scoreCards.map((card) => (
                         <div
                           key={card.label}
-                          className="rounded-xl border border-slate-200 p-3 bg-slate-50"
+                          className="rounded-xl border border-slate-200 bg-slate-50 p-3"
                         >
-                          <div className="font-semibold text-sm">{card.label}</div>
-                          <div className="text-2xl font-bold mt-1">{card.value}</div>
-                          <div className="text-xs text-slate-600 mt-1">
+                          <div className="text-xs font-semibold md:text-sm">
+                            {card.label}
+                          </div>
+                          <div className="mt-1 text-xl font-bold md:text-2xl">
+                            {card.value}
+                          </div>
+                          <div className="mt-1 text-xs text-slate-600">
                             TOMS: {card.toms}
                           </div>
                         </div>
@@ -1117,7 +1145,7 @@ function toggleRecommendedAsset(asset: RecommendedAsset) {
 
                   <div className="mb-5">
                     <strong>Priority Themes Ranked</strong>
-                    <ul className="list-disc pl-5 mt-2">
+                    <ul className="mt-2 list-disc pl-5">
                       {top.map((t) => (
                         <li key={t.name}>
                           {t.name} ({t.value}) —{" "}
@@ -1128,15 +1156,16 @@ function toggleRecommendedAsset(asset: RecommendedAsset) {
                   </div>
 
                   <div className="mb-4">
-                    <div className="flex gap-2 mb-3 flex-wrap">
+                    <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                       <button
                         type="button"
                         onClick={() => setDetailTab("toms")}
-                        className="px-3 py-2 rounded-lg text-white"
-                        style={{
-                          background:
-                            detailTab === "toms" ? "#00285B" : "#2fa4df",
-                        }}
+                        className={`${baseButtonClass} w-full sm:w-auto`}
+                        style={
+                          detailTab === "toms"
+                            ? activeButtonStyle
+                            : inactiveButtonStyle
+                        }
                       >
                         TOMS
                       </button>
@@ -1144,11 +1173,12 @@ function toggleRecommendedAsset(asset: RecommendedAsset) {
                       <button
                         type="button"
                         onClick={() => setDetailTab("why")}
-                        className="px-3 py-2 rounded-lg text-white"
-                        style={{
-                          background:
-                            detailTab === "why" ? "#00285B" : "#2fa4df",
-                        }}
+                        className={`${baseButtonClass} w-full sm:w-auto`}
+                        style={
+                          detailTab === "why"
+                            ? activeButtonStyle
+                            : inactiveButtonStyle
+                        }
                       >
                         Why It Matters
                       </button>
@@ -1156,11 +1186,12 @@ function toggleRecommendedAsset(asset: RecommendedAsset) {
                       <button
                         type="button"
                         onClick={() => setDetailTab("actions")}
-                        className="px-3 py-2 rounded-lg text-white"
-                        style={{
-                          background:
-                            detailTab === "actions" ? "#00285B" : "#2fa4df",
-                        }}
+                        className={`${baseButtonClass} w-full sm:w-auto`}
+                        style={
+                          detailTab === "actions"
+                            ? activeButtonStyle
+                            : inactiveButtonStyle
+                        }
                       >
                         Actions
                       </button>
@@ -1168,11 +1199,12 @@ function toggleRecommendedAsset(asset: RecommendedAsset) {
                       <button
                         type="button"
                         onClick={() => setDetailTab("method")}
-                        className="px-3 py-2 rounded-lg text-white"
-                        style={{
-                          background:
-                            detailTab === "method" ? "#00285B" : "#2fa4df",
-                        }}
+                        className={`${baseButtonClass} w-full sm:w-auto`}
+                        style={
+                          detailTab === "method"
+                            ? activeButtonStyle
+                            : inactiveButtonStyle
+                        }
                       >
                         Method
                       </button>
@@ -1182,17 +1214,17 @@ function toggleRecommendedAsset(asset: RecommendedAsset) {
                       {detailTab === "toms" && (
                         <div>
                           <strong>TOMS Alignment</strong>
-                          <div className="overflow-x-auto mt-3">
-                            <table className="w-full text-sm border-collapse">
+                          <div className="mt-3 overflow-x-auto">
+                            <table className="w-full min-w-[420px] border-collapse text-sm">
                               <thead>
                                 <tr className="bg-slate-100">
-                                  <th className="text-left p-2 border border-slate-200">
+                                  <th className="border border-slate-200 p-2 text-left">
                                     Theme
                                   </th>
-                                  <th className="text-left p-2 border border-slate-200">
+                                  <th className="border border-slate-200 p-2 text-left">
                                     TOMS Codes
                                   </th>
-                                  <th className="text-left p-2 border border-slate-200">
+                                  <th className="border border-slate-200 p-2 text-left">
                                     Score
                                   </th>
                                 </tr>
@@ -1200,13 +1232,13 @@ function toggleRecommendedAsset(asset: RecommendedAsset) {
                               <tbody>
                                 {top.map((t) => (
                                   <tr key={t.name}>
-                                    <td className="p-2 border border-slate-200">
+                                    <td className="border border-slate-200 p-2">
                                       {t.name}
                                     </td>
-                                    <td className="p-2 border border-slate-200">
+                                    <td className="border border-slate-200 p-2">
                                       {t.toms}
                                     </td>
-                                    <td className="p-2 border border-slate-200">
+                                    <td className="border border-slate-200 p-2">
                                       {t.value}
                                     </td>
                                   </tr>
@@ -1220,7 +1252,7 @@ function toggleRecommendedAsset(asset: RecommendedAsset) {
                       {detailTab === "why" && (
                         <div>
                           <strong>Why This Theme Matters Locally</strong>
-                          <ul className="list-disc pl-5 mt-3">
+                          <ul className="mt-3 list-disc pl-5">
                             {top.map((t) => (
                               <li key={t.name}>
                                 <strong>{t.name}:</strong> {t.why}
@@ -1233,7 +1265,7 @@ function toggleRecommendedAsset(asset: RecommendedAsset) {
                       {detailTab === "actions" && (
                         <div>
                           <strong>Suggested Interventions</strong>
-                          <ul className="list-disc pl-5 mt-3">
+                          <ul className="mt-3 list-disc pl-5">
                             {top.flatMap((t) => t.actions).map((a, i) => (
                               <li key={i}>{a}</li>
                             ))}
@@ -1243,11 +1275,12 @@ function toggleRecommendedAsset(asset: RecommendedAsset) {
 
                       {detailTab === "method" && (
                         <div>
-                          <div className="flex items-center justify-between gap-3">
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <strong>How This Score Is Calculated</strong>
                             <button
+                              type="button"
                               onClick={() => setShowMethodology(!showMethodology)}
-                              className="px-4 py-2 rounded-lg text-white text-sm"
+                              className="rounded-lg px-4 py-2 text-sm text-white"
                               style={{ background: "#00285B" }}
                             >
                               {showMethodology ? "Hide Detail" : "Show Detail"}
@@ -1263,7 +1296,7 @@ function toggleRecommendedAsset(asset: RecommendedAsset) {
 
                           {showMethodology && (
                             <>
-                              <ul className="list-disc pl-5 mt-3 text-sm">
+                              <ul className="mt-3 list-disc pl-5 text-sm">
                                 <li>
                                   <strong>Economic Inclusion</strong> — Income
                                   deprivation, employment deprivation, and access
@@ -1319,10 +1352,153 @@ function toggleRecommendedAsset(asset: RecommendedAsset) {
 
                           <p className="mt-3 text-sm text-slate-600">
                             Higher scores indicate themes are more likely to be
-                            materially relevant in the selected area. This supports
-                            early-stage screening, targeting and TOMS-aligned
-                            intervention planning.
+                            materially relevant in the selected area. This
+                            supports early-stage screening, targeting and
+                            TOMS-aligned intervention planning.
                           </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="hidden lg:block">
+                    <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 text-sm shadow-sm">
+                      <strong>Local Partners</strong>
+                      <div className="mt-2 text-sm text-slate-600">
+                        Based on the strongest local themes, these are the most
+                        relevant assets to review and, where appropriate, turn on
+                        in the map.
+                      </div>
+
+                      <div className="mt-3 space-y-3">
+                        {recommendedAssets.map((asset) => {
+                          const isToggleable = Boolean(asset.key);
+                          const isOn = asset.key ? poiToggles[asset.key] : false;
+
+                          return (
+                            <div
+                              key={asset.label}
+                              className="rounded-xl border border-slate-200 bg-slate-50 p-3"
+                            >
+                              <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+                                <div>
+                                  <div className="font-semibold">{asset.label}</div>
+                                  <div className="mt-1 text-sm text-slate-600">
+                                    {asset.reason}
+                                  </div>
+                                </div>
+
+                                {isToggleable ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleRecommendedAsset(asset)}
+                                    className="shrink-0 rounded-lg px-3 py-2 text-sm text-white"
+                                    style={{
+                                      background: isOn ? "#00285B" : "#2fa4df",
+                                    }}
+                                  >
+                                    {isOn ? "Hide On Map" : "Show On Map"}
+                                  </button>
+                                ) : (
+                                  <div className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500">
+                                    Reference Layer
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div className="mt-3 text-sm text-slate-600">
+                        This links <strong>priority themes</strong> to
+                        <strong> local delivery assets</strong>, making the output
+                        more practical for TOMS-aligned interventions,
+                        partnerships and bids.
+                      </div>
+                    </div>
+
+                    <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 text-sm shadow-sm">
+                      <strong>Legend</strong>
+
+                      {mapLayer !== "none" && (
+                        <div className="mt-3">
+                          <div className="mb-2 font-semibold">Map Legend</div>
+
+                          <div className="flex flex-wrap gap-4">
+                            {(mapLayer === "imd" ||
+                              mapLayer === "income" ||
+                              mapLayer === "employment" ||
+                              mapLayer === "education" ||
+                              mapLayer === "health") && (
+                              <>
+                                <span>
+                                  <span style={{ color: "#7f1d1d" }}>■</span> Higher
+                                  Need
+                                </span>
+                                <span>
+                                  <span style={{ color: "#f97316" }}>■</span> Medium
+                                </span>
+                                <span>
+                                  <span style={{ color: "#22c55e" }}>■</span> Lower
+                                  Need
+                                </span>
+                              </>
+                            )}
+
+                            {mapLayer === "fuel" && (
+                              <>
+                                <span>
+                                  <span style={{ color: "#16a34a" }}>■</span> Lower
+                                </span>
+                                <span>
+                                  <span style={{ color: "#facc15" }}>■</span> Medium
+                                </span>
+                                <span>
+                                  <span style={{ color: "#7f1d1d" }}>■</span> Higher
+                                </span>
+                              </>
+                            )}
+
+                            {mapLayer === "jobs" && (
+                              <>
+                                <span>
+                                  <span style={{ color: "#7f1d1d" }}>■</span> Poor
+                                  Access
+                                </span>
+                                <span>
+                                  <span style={{ color: "#facc15" }}>■</span> Medium
+                                </span>
+                                <span>
+                                  <span style={{ color: "#16a34a" }}>■</span> Better
+                                  Access
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {activePoiLegend.length > 0 && (
+                        <div className="mt-3">
+                          <div className="mb-2 font-semibold">
+                            Community Asset Legend
+                          </div>
+                          <div className="flex flex-wrap gap-4">
+                            {activePoiLegend.map((item) => (
+                              <span key={item.label}>
+                                <span style={{ color: item.color }}>●</span>{" "}
+                                {item.label}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {mapLayer === "none" && activePoiLegend.length === 0 && (
+                        <div className="mt-2 text-slate-600">
+                          Turn on a map layer or community asset to populate the
+                          legend.
                         </div>
                       )}
                     </div>
