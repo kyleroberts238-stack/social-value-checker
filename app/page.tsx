@@ -1,0 +1,1334 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import MapView, {
+  LookupMode,
+  MapLayer,
+  PoiToggles,
+} from "@/components/MapView";
+
+type LookupRow = {
+  postcode: string;
+  lsoa_code: string;
+  imd_decile: number;
+  lng: number;
+  lat: number;
+  need_level: string;
+  opportunity_score: number;
+};
+
+type Scores = {
+  economicInclusion: number;
+  skillsOpportunity: number;
+  healthWellbeing: number;
+  householdResilience: number;
+  environmentalSustainability: number;
+  overallMateriality: number;
+};
+
+type ThemeItem = {
+  name: string;
+  value: number;
+  toms: string;
+  why: string;
+  actions: string[];
+};
+
+type AssetToggleKey =
+  | "skills"
+  | "youth"
+  | "community"
+  | "foodbanks"
+  | "gps"
+  | "hospitals"
+  | "schools";
+
+type RecommendedAsset = {
+  label: string;
+  key?: AssetToggleKey;
+  reason: string;
+};
+
+type MapPanelTab = "layers" | "assets";
+type DetailTab = "toms" | "why" | "actions" | "method";
+
+const DEFAULT_CENTER = {
+  lat: 53.2403,
+  lng: -2.734,
+};
+
+function num(v: any) {
+  return Number(String(v ?? "").replace("%", "").trim());
+}
+
+function decileNeed(d: number) {
+  return (11 - d) * 10;
+}
+
+function pctNeed(p: number) {
+  return 100 - p;
+}
+
+function fuelNeed(p: number) {
+  return Math.min(100, p * 5);
+}
+
+function environmentalScore(p: any) {
+  const hasGreenspace = Number(p["has_greenspace"] ?? 0);
+  const hasPriorityHabitat = Number(p["has_priority_habitat"] ?? 0);
+
+  const greenspaceScore = hasGreenspace === 1 ? 60 : 20;
+  const habitatScore = hasPriorityHabitat === 1 ? 80 : 20;
+
+  return Math.round(greenspaceScore * 0.5 + habitatScore * 0.5);
+}
+
+function calcScores(p: any): Scores {
+  const income = decileNeed(num(p["Income Decile"]));
+  const employment = decileNeed(num(p["Employment Decile"]));
+  const education = decileNeed(
+    num(p["Education, Skills and Training Decile"])
+  );
+  const health = decileNeed(
+    num(p["Health Deprivation and Disability Decile"])
+  );
+
+  const gp = pctNeed(num(p["Users within 15 minutes of GPs by PT/walk (%)"]));
+  const jobs = pctNeed(
+    num(p["Users within 30 minutes of Employment by PT/walk (%)"])
+  );
+  const food = pctNeed(
+    num(p["Users within 15 minutes of Food Store by PT/walk (%)"])
+  );
+  const fuel = fuelNeed(num(p["Households Fuel Poor (%)"]));
+
+  const economicInclusion = income * 0.35 + employment * 0.35 + jobs * 0.3;
+  const skillsOpportunity = education * 0.6 + employment * 0.4;
+  const healthWellbeing = health * 0.6 + gp * 0.4;
+  const householdResilience = fuel * 0.5 + income * 0.3 + food * 0.2;
+  const environmentalSustainability = environmentalScore(p);
+
+  const overallMateriality =
+    economicInclusion * 0.25 +
+    skillsOpportunity * 0.2 +
+    healthWellbeing * 0.2 +
+    householdResilience * 0.2 +
+    environmentalSustainability * 0.15;
+
+  return {
+    economicInclusion: Math.round(economicInclusion),
+    skillsOpportunity: Math.round(skillsOpportunity),
+    healthWellbeing: Math.round(healthWellbeing),
+    householdResilience: Math.round(householdResilience),
+    environmentalSustainability: Math.round(environmentalSustainability),
+    overallMateriality: Math.round(overallMateriality),
+  };
+}
+
+function band(v: number) {
+  if (v >= 70) return "High";
+  if (v >= 45) return "Moderate";
+  return "Low";
+}
+
+function themes(scores: Scores): ThemeItem[] {
+  const t = [
+    {
+      name: "Health And Wellbeing",
+      value: scores.healthWellbeing,
+      toms: "NT17, NT18",
+      why:
+        "Local health and accessibility indicators suggest relevance for wellbeing-focused initiatives that support community resilience and participation.",
+      actions: [
+        "Community Wellbeing Programmes",
+        "Health Partnerships",
+        "Active Travel Initiatives",
+      ],
+    },
+    {
+      name: "Skills And Progression",
+      value: scores.skillsOpportunity,
+      toms: "NT11, NT12, NT13",
+      why:
+        "Education and employment indicators highlight opportunities to support skills development, early careers pathways and workforce participation.",
+      actions: ["Apprenticeships", "Work Placements", "School Outreach"],
+    },
+    {
+      name: "Economic Inclusion",
+      value: scores.economicInclusion,
+      toms: "NT1, NT2, NT10",
+      why:
+        "Economic participation indicators are generally favourable, with potential to reinforce inclusive access to employment and local supply chain opportunities.",
+      actions: ["Local Hiring", "SME Procurement", "Employability Partnerships"],
+    },
+    {
+      name: "Household Resilience",
+      value: scores.householdResilience,
+      toms: "NT18, NT19",
+      why:
+        "Household affordability indicators suggest relevance for initiatives supporting resilience, financial wellbeing and access to essential services.",
+      actions: [
+        "Fuel Poverty Support",
+        "Energy Advice",
+        "Community Resilience Programmes",
+      ],
+    },
+    {
+      name: "Environmental Sustainability",
+      value: scores.environmentalSustainability,
+      toms: "NT30, NT31, NT33",
+      why:
+        "Environmental context indicates potential relevance for biodiversity enhancement, access-to-nature improvements and wider environmental value interventions.",
+      actions: [
+        "Biodiversity Enhancement",
+        "Greenspace Improvement",
+        "Nature-Based Projects",
+      ],
+    },
+  ];
+
+  return t.sort((a, b) => b.value - a.value);
+}
+
+function layerDescription(layer: MapLayer) {
+  if (layer === "none") {
+    return "Base map only with no data overlay.";
+  }
+  if (layer === "imd") {
+    return "Overall Index of Multiple Deprivation. Lower deciles indicate higher relative need.";
+  }
+  if (layer === "income") {
+    return "Income deprivation. Highlights areas where household income stress is likely to be more severe.";
+  }
+  if (layer === "employment") {
+    return "Employment deprivation. Indicates areas where exclusion from the labour market is more acute.";
+  }
+  if (layer === "education") {
+    return "Education, skills and training deprivation. Useful for identifying areas where skills investment may be material.";
+  }
+  if (layer === "health") {
+    return "Health deprivation and disability. Highlights areas with greater health and wellbeing pressures.";
+  }
+  if (layer === "fuel") {
+    return "Fuel poverty. Shows areas where household energy affordability pressures are higher.";
+  }
+  return "Employment accessibility by public transport and walking within 30 minutes. Lower access suggests greater mobility constraints.";
+}
+
+function getFeatureLsoaCode(properties: any) {
+  return (
+    properties?.["LSOA21CD"] ||
+    properties?.["LSOA11CD"] ||
+    properties?.["LSOA code (2011)"] ||
+    null
+  );
+}
+
+function isPointInRing(point: [number, number], ring: number[][]) {
+  const [x, y] = point;
+  let inside = false;
+
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0];
+    const yi = ring[i][1];
+    const xj = ring[j][0];
+    const yj = ring[j][1];
+
+    const intersect =
+      yi > y !== yj > y &&
+      x < ((xj - xi) * (y - yi)) / ((yj - yi) || Number.EPSILON) + xi;
+
+    if (intersect) inside = !inside;
+  }
+
+  return inside;
+}
+
+function isPointInPolygonGeometry(point: [number, number], geometry: any) {
+  if (!geometry) return false;
+
+  if (geometry.type === "Polygon") {
+    const rings = geometry.coordinates || [];
+    if (!rings.length) return false;
+    if (!isPointInRing(point, rings[0])) return false;
+
+    for (let i = 1; i < rings.length; i += 1) {
+      if (isPointInRing(point, rings[i])) return false;
+    }
+    return true;
+  }
+
+  if (geometry.type === "MultiPolygon") {
+    for (const polygon of geometry.coordinates || []) {
+      if (!polygon.length) continue;
+      if (!isPointInRing(point, polygon[0])) continue;
+
+      let insideHole = false;
+      for (let i = 1; i < polygon.length; i += 1) {
+        if (isPointInRing(point, polygon[i])) {
+          insideHole = true;
+          break;
+        }
+      }
+
+      if (!insideHole) return true;
+    }
+  }
+
+  return false;
+}
+
+function findLsoaByPoint(lsoa: any, lng: number, lat: number) {
+  if (!lsoa?.features?.length) return null;
+  const point: [number, number] = [lng, lat];
+
+  for (const feature of lsoa.features) {
+    if (isPointInPolygonGeometry(point, feature.geometry)) {
+      return feature;
+    }
+  }
+
+  return null;
+}
+
+function toRad(value: number) {
+  return (value * Math.PI) / 180;
+}
+
+function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const R = 6371;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function findClosestPostcode(
+  lookup: any,
+  lat: number,
+  lng: number
+): string | null {
+  if (!lookup?.features?.length) return null;
+
+  let bestPostcode: string | null = null;
+  let bestDistance = Infinity;
+
+  for (const feature of lookup.features) {
+    const props = feature.properties;
+    const pcLat = Number(props?.lat);
+    const pcLng = Number(props?.lng);
+    const pc = props?.postcode;
+
+    if (!pc || Number.isNaN(pcLat) || Number.isNaN(pcLng)) continue;
+
+    const d = distanceKm(lat, lng, pcLat, pcLng);
+
+    if (d < bestDistance) {
+      bestDistance = d;
+      bestPostcode = pc;
+    }
+  }
+
+  return bestPostcode;
+}
+
+function recommendedAssetsFromThemes(
+  topThemes: ThemeItem[]
+): RecommendedAsset[] {
+  const assetMap: Record<string, RecommendedAsset[]> = {
+    "Economic Inclusion": [
+      {
+        label: "Skills Providers",
+        key: "skills",
+        reason:
+          "Useful for employability pathways, local skills activity and access to work support.",
+      },
+      {
+        label: "Community Centres",
+        key: "community",
+        reason:
+          "Can support outreach, local delivery and inclusive community-based programmes.",
+      },
+    ],
+    "Skills And Progression": [
+      {
+        label: "Schools / Colleges",
+        key: "schools",
+        reason:
+          "Relevant for school engagement, careers pathways, outreach and education-linked interventions.",
+      },
+      {
+        label: "Skills Providers",
+        key: "skills",
+        reason:
+          "Relevant for training provision, apprenticeships and employability support.",
+      },
+      {
+        label: "Youth Provision",
+        key: "youth",
+        reason:
+          "Useful for early careers, mentoring and youth-focused opportunity creation.",
+      },
+    ],
+    "Health And Wellbeing": [
+      {
+        label: "GP Surgeries",
+        key: "gps",
+        reason:
+          "Helpful for understanding local health service presence and wellbeing-related context.",
+      },
+      {
+        label: "Hospitals",
+        key: "hospitals",
+        reason:
+          "Relevant where wider health infrastructure and access are part of local need.",
+      },
+      {
+        label: "Community Centres",
+        key: "community",
+        reason:
+          "Can support social prescribing, wellbeing delivery and trusted local engagement.",
+      },
+      {
+        label: "Greenspace",
+        reason:
+          "Relevant for active travel, access to nature and healthier community environments.",
+      },
+    ],
+    "Household Resilience": [
+      {
+        label: "Foodbanks",
+        key: "foodbanks",
+        reason:
+          "Useful indicator of immediate household support need and community resilience pressure.",
+      },
+      {
+        label: "Community Centres",
+        key: "community",
+        reason:
+          "Can support advice services, resilience programmes and trusted local delivery.",
+      },
+      {
+        label: "GP Surgeries",
+        key: "gps",
+        reason:
+          "Helpful where health, hardship and household vulnerability intersect.",
+      },
+    ],
+    "Environmental Sustainability": [
+      {
+        label: "Greenspace",
+        reason:
+          "Supports access-to-nature interventions, environmental improvement and wellbeing co-benefits.",
+      },
+      {
+        label: "Priority Habitat",
+        reason:
+          "Indicates biodiversity relevance and potential need for protection or enhancement.",
+      },
+      {
+        label: "Community Centres",
+        key: "community",
+        reason:
+          "Can support local stewardship, volunteering and nature-based community projects.",
+      },
+    ],
+  };
+
+  const ranked = topThemes.slice(0, 3);
+  const deduped = new Map<string, RecommendedAsset>();
+
+  ranked.forEach((theme) => {
+    (assetMap[theme.name] || []).forEach((asset) => {
+      if (!deduped.has(asset.label)) {
+        deduped.set(asset.label, asset);
+      }
+    });
+  });
+
+  return Array.from(deduped.values());
+}
+
+export default function Page() {
+  const [postcode, setPostcode] = useState("");
+  const [lookup, setLookup] = useState<any>(null);
+  const [lsoa, setLsoa] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  const [lookupMode, setLookupMode] = useState<LookupMode>("postcode");
+  const [mapLayer, setMapLayer] = useState<MapLayer>("none");
+  const [showMethodology, setShowMethodology] = useState(false);
+  const [mapPanelTab, setMapPanelTab] = useState<MapPanelTab>("layers");
+  const [detailTab, setDetailTab] = useState<DetailTab>("toms");
+
+  const [selectedPoint, setSelectedPoint] = useState(DEFAULT_CENTER);
+  const [selectedLsoaProps, setSelectedLsoaProps] = useState<any>(null);
+  const [selectedLookupRow, setSelectedLookupRow] = useState<LookupRow | null>(
+    null
+  );
+  const [siteCoords, setSiteCoords] = useState<{ lng: number; lat: number } | null>(
+    null
+  );
+  const [siteNearestPostcode, setSiteNearestPostcode] = useState<string | null>(
+    null
+  );
+
+  const [scores, setScores] = useState<Scores | null>(null);
+  const [top, setTop] = useState<ThemeItem[]>([]);
+
+  const [poiToggles, setPoiToggles] = useState<PoiToggles>({
+    skills: false,
+    youth: false,
+    community: false,
+    foodbanks: false,
+    gps: false,
+    hospitals: false,
+    schools: false,
+  });
+
+  useEffect(() => {
+    Promise.all([
+      fetch("/data/ch_lookup_clean.geojson").then((r) => r.json()),
+      fetch("/data/ch_LSOA_Data.geojson").then((r) => r.json()),
+    ]).then(([a, b]) => {
+      setLookup(a);
+      setLsoa(b);
+      setLoading(false);
+    });
+  }, []);
+
+  function applySelectedFeature(feature: any, point: { lng: number; lat: number }) {
+    if (!feature) {
+      setSelectedLsoaProps(null);
+      setScores(null);
+      setTop([]);
+      setShowMethodology(false);
+      setSelectedPoint({ lat: point.lat, lng: point.lng });
+      return;
+    }
+
+    setSelectedPoint({ lat: point.lat, lng: point.lng });
+    setSelectedLsoaProps(feature.properties);
+
+    const s = calcScores(feature.properties);
+    setScores(s);
+    setTop(themes(s));
+    setShowMethodology(false);
+  }
+
+  function searchPostcode() {
+    if (!lookup || !lsoa) return;
+
+    const pc = postcode.trim().replace(/\s+/g, "").toUpperCase();
+
+    const found = lookup.features.find((f: any) => {
+      const candidate = String(f.properties?.postcode || "")
+        .replace(/\s+/g, "")
+        .toUpperCase();
+      return candidate === pc;
+    });
+
+    if (!found) {
+      alert("Postcode not found");
+      return;
+    }
+
+    const props = found.properties;
+    setSelectedLookupRow(props);
+    setSiteCoords(null);
+    setSiteNearestPostcode(null);
+
+    const lsoaCode = props.lsoa_code;
+    const lsoaMatch =
+      lsoa.features.find((f: any) => getFeatureLsoaCode(f.properties) === lsoaCode) ||
+      findLsoaByPoint(lsoa, Number(props.lng), Number(props.lat));
+
+    applySelectedFeature(lsoaMatch, {
+      lng: Number(props.lng),
+      lat: Number(props.lat),
+    });
+  }
+
+  useEffect(() => {
+    if (!siteCoords || !lsoa || !lookup) return;
+
+    const lsoaMatch = findLsoaByPoint(lsoa, siteCoords.lng, siteCoords.lat);
+    const nearestPostcode = findClosestPostcode(
+      lookup,
+      siteCoords.lat,
+      siteCoords.lng
+    );
+
+    setSelectedLookupRow(null);
+    setSiteNearestPostcode(nearestPostcode);
+    applySelectedFeature(lsoaMatch, siteCoords);
+  }, [siteCoords, lsoa, lookup]);
+
+  const activePoiLegend = useMemo(
+    () =>
+      [
+        poiToggles.skills && { label: "Skills Providers", color: "#2563eb" },
+        poiToggles.youth && { label: "Youth Provision", color: "#7c3aed" },
+        poiToggles.community && { label: "Community Centres", color: "#0891b2" },
+        poiToggles.foodbanks && { label: "Foodbanks", color: "#dc2626" },
+        poiToggles.gps && { label: "GP Surgeries", color: "#16a34a" },
+        poiToggles.hospitals && { label: "Hospitals", color: "#ea580c" },
+        poiToggles.schools && { label: "Schools / Colleges", color: "#ca8a04" },
+      ].filter(Boolean) as { label: string; color: string }[],
+    [poiToggles]
+  );
+
+  const recommendedAssets = useMemo(
+    () => recommendedAssetsFromThemes(top),
+    [top]
+  );
+
+  const hasSelection = Boolean(selectedLookupRow || siteCoords || scores);
+
+  const selectedAreaLabel =
+    lookupMode === "postcode"
+      ? selectedLookupRow?.postcode || "No postcode selected"
+      : siteCoords
+      ? `Site${siteNearestPostcode ? ` (${siteNearestPostcode})` : ""}`
+      : "No site selected";
+
+  const scoreCards = scores
+    ? [
+        {
+          label: "Economic Inclusion",
+          value: scores.economicInclusion,
+          toms: "NT1, NT2, NT10",
+        },
+        {
+          label: "Skills And Progression",
+          value: scores.skillsOpportunity,
+          toms: "NT11, NT12, NT13",
+        },
+        {
+          label: "Health And Wellbeing",
+          value: scores.healthWellbeing,
+          toms: "NT17, NT18",
+        },
+        {
+          label: "Household Resilience",
+          value: scores.householdResilience,
+          toms: "NT18, NT19",
+        },
+        {
+          label: "Environmental Sustainability",
+          value: scores.environmentalSustainability,
+          toms: "NT30, NT31, NT33",
+        },
+      ]
+    : [];
+
+  function toggleRecommendedAsset(asset: RecommendedAsset) {
+    if (!asset.key) return;
+    setPoiToggles((prev) => ({
+      ...prev,
+      [asset.key]: !prev[asset.key],
+    }));
+    setMapPanelTab("assets");
+  }
+
+  return (
+    <main style={{ background: "#00285B" }} className="min-h-screen p-10">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex items-center justify-between gap-4 mb-8">
+          <img src="/logo.png" alt="MapHorizon Logo" style={{ height: 60 }} />
+          <div className="text-right ml-auto">
+            <h1 className="text-4xl font-bold text-white">
+              Social Value Opportunity Checker
+            </h1>
+            <div className="text-blue-100">
+              Powered by MapHorizon Geospatial Intelligence
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-2xl shadow-md mb-6">
+          <div className="flex gap-2 mb-4">
+            <button
+              type="button"
+              onClick={() => setLookupMode("postcode")}
+              className="px-4 py-2 rounded-lg text-white"
+              style={{
+                background: lookupMode === "postcode" ? "#00285B" : "#2fa4df",
+              }}
+            >
+              Postcode Lookup
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setLookupMode("site")}
+              className="px-4 py-2 rounded-lg text-white"
+              style={{
+                background: lookupMode === "site" ? "#00285B" : "#2fa4df",
+              }}
+            >
+              Site Lookup
+            </button>
+          </div>
+
+          {lookupMode === "postcode" ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                searchPostcode();
+              }}
+              className="flex gap-3"
+            >
+              <input
+                value={postcode}
+                onChange={(e) => setPostcode(e.target.value)}
+                placeholder="Enter CH postcode"
+                className="flex-1 border rounded-xl px-4 py-3"
+              />
+              <button
+                type="submit"
+                style={{ background: "#2fa4df" }}
+                className="text-white px-5 py-3 rounded-xl"
+              >
+                Check Opportunity
+              </button>
+            </form>
+          ) : (
+            <div className="rounded-xl bg-slate-50 px-4 py-4 text-slate-700 text-sm">
+              Click anywhere on the map to select a site location and run screening.
+            </div>
+          )}
+        </div>
+
+        {loading && (
+          <div className="bg-white p-6 rounded-2xl shadow-md">Loading data...</div>
+        )}
+
+        {!loading && (
+          <div className="grid lg:grid-cols-[1.02fr_0.98fr] gap-6 items-start">
+            <div className="flex flex-col">
+              <div className="rounded-2xl overflow-hidden shadow-md bg-white">
+                <MapView
+                  lat={selectedPoint.lat}
+                  lng={selectedPoint.lng}
+                  mapLayer={mapLayer}
+                  popupData={selectedLsoaProps}
+                  poiToggles={poiToggles}
+                  lookupMode={lookupMode}
+                  onSiteSelect={(coords) => setSiteCoords(coords)}
+                />
+              </div>
+
+              <div className="bg-white p-4 mt-3 rounded-2xl shadow-md text-sm">
+                <div className="flex gap-2 mb-3 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setMapPanelTab("layers")}
+                    className="px-3 py-2 rounded-lg text-white"
+                    style={{
+                      background:
+                        mapPanelTab === "layers" ? "#00285B" : "#2fa4df",
+                    }}
+                  >
+                    Layers
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setMapPanelTab("assets")}
+                    className="px-3 py-2 rounded-lg text-white"
+                    style={{
+                      background:
+                        mapPanelTab === "assets" ? "#00285B" : "#2fa4df",
+                    }}
+                  >
+                    Assets
+                  </button>
+                </div>
+
+                {mapPanelTab === "layers" && (
+                  <div>
+                    <div className="font-semibold mb-2">Map Layer</div>
+
+                    <div className="flex gap-2 flex-wrap">
+                      {[
+                        ["none", "Base Map"],
+                        ["imd", "IMD"],
+                        ["income", "Income"],
+                        ["employment", "Employment"],
+                        ["education", "Education"],
+                        ["health", "Health"],
+                        ["fuel", "Fuel Poverty"],
+                        ["jobs", "Employment Access"],
+                      ].map(([value, label]) => (
+                        <button
+                          key={value}
+                          onClick={() => setMapLayer(value as MapLayer)}
+                          className="px-3 py-2 rounded-lg text-white"
+                          style={{
+                            background:
+                              mapLayer === value ? "#00285B" : "#2fa4df",
+                          }}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="mt-3 rounded-xl bg-slate-50 px-3 py-3 text-slate-700">
+                      <strong>Layer Description:</strong>{" "}
+                      {layerDescription(mapLayer)}
+                    </div>
+                  </div>
+                )}
+
+                {mapPanelTab === "assets" && (
+                  <div>
+                    <div className="font-semibold mb-2">Community Assets</div>
+
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={poiToggles.skills}
+                          onChange={() =>
+                            setPoiToggles((prev) => ({
+                              ...prev,
+                              skills: !prev.skills,
+                            }))
+                          }
+                        />
+                        Skills Providers
+                      </label>
+
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={poiToggles.youth}
+                          onChange={() =>
+                            setPoiToggles((prev) => ({
+                              ...prev,
+                              youth: !prev.youth,
+                            }))
+                          }
+                        />
+                        Youth Provision
+                      </label>
+
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={poiToggles.community}
+                          onChange={() =>
+                            setPoiToggles((prev) => ({
+                              ...prev,
+                              community: !prev.community,
+                            }))
+                          }
+                        />
+                        Community Centres
+                      </label>
+
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={poiToggles.foodbanks}
+                          onChange={() =>
+                            setPoiToggles((prev) => ({
+                              ...prev,
+                              foodbanks: !prev.foodbanks,
+                            }))
+                          }
+                        />
+                        Foodbanks
+                      </label>
+
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={poiToggles.gps}
+                          onChange={() =>
+                            setPoiToggles((prev) => ({
+                              ...prev,
+                              gps: !prev.gps,
+                            }))
+                          }
+                        />
+                        GP Surgeries
+                      </label>
+
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={poiToggles.hospitals}
+                          onChange={() =>
+                            setPoiToggles((prev) => ({
+                              ...prev,
+                              hospitals: !prev.hospitals,
+                            }))
+                          }
+                        />
+                        Hospitals
+                      </label>
+
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={poiToggles.schools}
+                          onChange={() =>
+                            setPoiToggles((prev) => ({
+                              ...prev,
+                              schools: !prev.schools,
+                            }))
+                          }
+                        />
+                        Schools / Colleges
+                      </label>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-white p-4 mt-3 rounded-2xl shadow-md text-sm">
+                <strong>Legend</strong>
+
+                {mapLayer !== "none" && (
+                  <div className="mt-3">
+                    <div className="font-semibold mb-2">Map Legend</div>
+
+                    <div className="flex gap-4 flex-wrap">
+                      {(mapLayer === "imd" ||
+                        mapLayer === "income" ||
+                        mapLayer === "employment" ||
+                        mapLayer === "education" ||
+                        mapLayer === "health") && (
+                        <>
+                          <span>
+                            <span style={{ color: "#7f1d1d" }}>■</span> Higher
+                            Need
+                          </span>
+                          <span>
+                            <span style={{ color: "#f97316" }}>■</span> Medium
+                          </span>
+                          <span>
+                            <span style={{ color: "#22c55e" }}>■</span> Lower Need
+                          </span>
+                        </>
+                      )}
+
+                      {mapLayer === "fuel" && (
+                        <>
+                          <span>
+                            <span style={{ color: "#16a34a" }}>■</span> Lower
+                          </span>
+                          <span>
+                            <span style={{ color: "#facc15" }}>■</span> Medium
+                          </span>
+                          <span>
+                            <span style={{ color: "#7f1d1d" }}>■</span> Higher
+                          </span>
+                        </>
+                      )}
+
+                      {mapLayer === "jobs" && (
+                        <>
+                          <span>
+                            <span style={{ color: "#7f1d1d" }}>■</span> Poor Access
+                          </span>
+                          <span>
+                            <span style={{ color: "#facc15" }}>■</span> Medium
+                          </span>
+                          <span>
+                            <span style={{ color: "#16a34a" }}>■</span> Better
+                            Access
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {activePoiLegend.length > 0 && (
+                  <div className="mt-3">
+                    <div className="font-semibold mb-2">
+                      Community Asset Legend
+                    </div>
+                    <div className="flex gap-4 flex-wrap">
+                      {activePoiLegend.map((item) => (
+                        <span key={item.label}>
+                          <span style={{ color: item.color }}>●</span> {item.label}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {mapLayer === "none" && activePoiLegend.length === 0 && (
+                  <div className="text-slate-600 mt-2">
+                    Turn on a map layer or community asset to populate the legend.
+                  </div>
+                )}
+              </div>
+
+              {hasSelection && (
+                <div className="bg-white p-4 mt-3 rounded-2xl shadow-md text-sm">
+                  <strong>Local Partners</strong>
+                  <div className="text-sm text-slate-600 mt-2">
+                    Based on the strongest local themes, these are the most relevant
+                    assets to review and, where appropriate, turn on in the map.
+                  </div>
+
+                  <div className="mt-3 space-y-3">
+                    {recommendedAssets.map((asset) => {
+                      const isToggleable = Boolean(asset.key);
+                      const isOn = asset.key ? poiToggles[asset.key] : false;
+
+                      return (
+                        <div
+                          key={asset.label}
+                          className="rounded-xl border border-slate-200 bg-slate-50 p-3"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <div className="font-semibold">{asset.label}</div>
+                              <div className="text-sm text-slate-600 mt-1">
+                                {asset.reason}
+                              </div>
+                            </div>
+
+                            {isToggleable ? (
+                              <button
+                                type="button"
+                                onClick={() => toggleRecommendedAsset(asset)}
+                                className="shrink-0 px-3 py-2 rounded-lg text-white text-sm"
+                                style={{
+                                  background: isOn ? "#00285B" : "#2fa4df",
+                                }}
+                              >
+                                {isOn ? "Hide On Map" : "Show On Map"}
+                              </button>
+                            ) : (
+                              <div className="shrink-0 text-xs text-slate-500 rounded-lg bg-white px-3 py-2 border border-slate-200">
+                                Reference Layer
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="text-sm text-slate-600 mt-3">
+                    This links <strong>priority themes</strong> to
+                    <strong> local delivery assets</strong>, making the output more
+                    practical for TOMS-aligned interventions, partnerships and bids.
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-white p-6 rounded-2xl shadow-md">
+              <h2 className="text-2xl font-semibold mb-3">{selectedAreaLabel}</h2>
+
+              {hasSelection && (
+                <div className="text-sm mb-4">
+                  {lookupMode === "postcode" ? (
+                    <>
+                      <div>
+                        LSOA:{" "}
+                        {selectedLookupRow?.lsoa_code ||
+                          selectedLsoaProps?.["LSOA21CD"] ||
+                          selectedLsoaProps?.["LSOA11CD"]}
+                      </div>
+                      <div>
+                        IMD Decile:{" "}
+                        {selectedLookupRow?.imd_decile ??
+                          selectedLsoaProps?.["IMD Decile"]}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {(selectedLsoaProps?.["LSOA21CD"] ||
+                        selectedLsoaProps?.["LSOA11CD"]) && (
+                        <div>
+                          LSOA:{" "}
+                          {selectedLsoaProps?.["LSOA21CD"] ||
+                            selectedLsoaProps?.["LSOA11CD"]}
+                        </div>
+                      )}
+                      {siteNearestPostcode && (
+                        <div>Nearest postcode: {siteNearestPostcode}</div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+
+              {!scores && (
+                <div className="rounded-xl bg-slate-50 p-4 text-slate-700 text-sm">
+                  {lookupMode === "postcode"
+                    ? "Enter a postcode and run the lookup."
+                    : "Click a site location on the map to run screening."}
+                </div>
+              )}
+
+              {scores && (
+                <>
+                  <div
+                    style={{ background: "#00285B" }}
+                    className="text-white p-4 rounded-xl mb-4"
+                  >
+                    Overall Materiality
+                    <div className="text-3xl font-bold">
+                      {scores.overallMateriality}/100
+                    </div>
+                    {band(scores.overallMateriality)}
+                  </div>
+
+                  <div className="mb-5">
+                    <strong>Theme Scores</strong>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                      {scoreCards.map((card) => (
+                        <div
+                          key={card.label}
+                          className="rounded-xl border border-slate-200 p-3 bg-slate-50"
+                        >
+                          <div className="font-semibold text-sm">{card.label}</div>
+                          <div className="text-2xl font-bold mt-1">{card.value}</div>
+                          <div className="text-xs text-slate-600 mt-1">
+                            TOMS: {card.toms}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mb-5">
+                    <strong>Priority Themes Ranked</strong>
+                    <ul className="list-disc pl-5 mt-2">
+                      {top.map((t) => (
+                        <li key={t.name}>
+                          {t.name} ({t.value}) —{" "}
+                          <span className="text-slate-600">TOMS {t.toms}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="mb-4">
+                    <div className="flex gap-2 mb-3 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => setDetailTab("toms")}
+                        className="px-3 py-2 rounded-lg text-white"
+                        style={{
+                          background:
+                            detailTab === "toms" ? "#00285B" : "#2fa4df",
+                        }}
+                      >
+                        TOMS
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setDetailTab("why")}
+                        className="px-3 py-2 rounded-lg text-white"
+                        style={{
+                          background:
+                            detailTab === "why" ? "#00285B" : "#2fa4df",
+                        }}
+                      >
+                        Why It Matters
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setDetailTab("actions")}
+                        className="px-3 py-2 rounded-lg text-white"
+                        style={{
+                          background:
+                            detailTab === "actions" ? "#00285B" : "#2fa4df",
+                        }}
+                      >
+                        Actions
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setDetailTab("method")}
+                        className="px-3 py-2 rounded-lg text-white"
+                        style={{
+                          background:
+                            detailTab === "method" ? "#00285B" : "#2fa4df",
+                        }}
+                      >
+                        Method
+                      </button>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      {detailTab === "toms" && (
+                        <div>
+                          <strong>TOMS Alignment</strong>
+                          <div className="overflow-x-auto mt-3">
+                            <table className="w-full text-sm border-collapse">
+                              <thead>
+                                <tr className="bg-slate-100">
+                                  <th className="text-left p-2 border border-slate-200">
+                                    Theme
+                                  </th>
+                                  <th className="text-left p-2 border border-slate-200">
+                                    TOMS Codes
+                                  </th>
+                                  <th className="text-left p-2 border border-slate-200">
+                                    Score
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {top.map((t) => (
+                                  <tr key={t.name}>
+                                    <td className="p-2 border border-slate-200">
+                                      {t.name}
+                                    </td>
+                                    <td className="p-2 border border-slate-200">
+                                      {t.toms}
+                                    </td>
+                                    <td className="p-2 border border-slate-200">
+                                      {t.value}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+
+                      {detailTab === "why" && (
+                        <div>
+                          <strong>Why This Theme Matters Locally</strong>
+                          <ul className="list-disc pl-5 mt-3">
+                            {top.map((t) => (
+                              <li key={t.name}>
+                                <strong>{t.name}:</strong> {t.why}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {detailTab === "actions" && (
+                        <div>
+                          <strong>Suggested Interventions</strong>
+                          <ul className="list-disc pl-5 mt-3">
+                            {top.flatMap((t) => t.actions).map((a, i) => (
+                              <li key={i}>{a}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {detailTab === "method" && (
+                        <div>
+                          <div className="flex items-center justify-between gap-3">
+                            <strong>How This Score Is Calculated</strong>
+                            <button
+                              onClick={() => setShowMethodology(!showMethodology)}
+                              className="px-4 py-2 rounded-lg text-white text-sm"
+                              style={{ background: "#00285B" }}
+                            >
+                              {showMethodology ? "Hide Detail" : "Show Detail"}
+                            </button>
+                          </div>
+
+                          <p className="mt-3 text-sm">
+                            The Overall Materiality Score is an indicative
+                            screening score out of 100. It combines five themes
+                            aligned to TOMS-related social and environmental
+                            outcomes.
+                          </p>
+
+                          {showMethodology && (
+                            <>
+                              <ul className="list-disc pl-5 mt-3 text-sm">
+                                <li>
+                                  <strong>Economic Inclusion</strong> — Income
+                                  deprivation, employment deprivation, and access
+                                  to employment within 30 minutes.
+                                </li>
+                                <li>
+                                  <strong>Skills And Progression</strong> —
+                                  Education, skills and training deprivation and
+                                  employment conditions.
+                                </li>
+                                <li>
+                                  <strong>Health And Wellbeing</strong> — Health
+                                  deprivation and disability and access to GPs
+                                  within 15 minutes.
+                                </li>
+                                <li>
+                                  <strong>Household Resilience</strong> — Fuel
+                                  poverty, income pressures, and access to food
+                                  stores within 15 minutes.
+                                </li>
+                                <li>
+                                  <strong>Environmental Sustainability</strong> —
+                                  Screening indicator based on local greenspace
+                                  presence and priority habitat presence.
+                                </li>
+                              </ul>
+
+                              <p className="mt-3 text-sm">
+                                <strong>Weighting</strong>
+                                <br />
+                                Economic Inclusion 25%
+                                <br />
+                                Skills And Progression 20%
+                                <br />
+                                Health And Wellbeing 20%
+                                <br />
+                                Household Resilience 20%
+                                <br />
+                                Environmental Sustainability 15%
+                              </p>
+
+                              <p className="mt-3 text-sm">
+                                <strong>Environmental Theme Logic</strong>
+                                <br />
+                                `has_greenspace = 1` contributes a moderate
+                                positive environmental relevance score.
+                                <br />
+                                `has_priority_habitat = 1` contributes a stronger
+                                biodiversity relevance score.
+                              </p>
+                            </>
+                          )}
+
+                          <p className="mt-3 text-sm text-slate-600">
+                            Higher scores indicate themes are more likely to be
+                            materially relevant in the selected area. This supports
+                            early-stage screening, targeting and TOMS-aligned
+                            intervention planning.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </main>
+  );
+}
