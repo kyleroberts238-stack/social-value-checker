@@ -683,26 +683,6 @@ export default function MapView({
         }}
       />
 
-      {lookupMode === "site" && (
-        <div
-          style={{
-            position: "absolute",
-            top: "12px",
-            left: "12px",
-            right: "12px",
-            zIndex: 10,
-            background: "rgba(255,255,255,0.96)",
-            borderRadius: "10px",
-            boxShadow: "0 6px 20px rgba(0,0,0,0.12)",
-            padding: "8px 10px",
-            fontSize: "12px",
-            fontFamily: "Segoe UI, Arial, sans-serif",
-          }}
-        >
-          Click the map to select a site location.
-        </div>
-      )}
-
       {popupData && (
         <div
           style={{
