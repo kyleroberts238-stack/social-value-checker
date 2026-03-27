@@ -49,7 +49,7 @@ type RecommendedAsset = {
   reason: string;
 };
 
-type MapPanelTab = "layers" | "assets";
+type MapPanelTab = "layers" | "partners";
 type DetailTab = "toms" | "why" | "actions" | "method";
 
 const DEFAULT_CENTER = {
@@ -641,7 +641,7 @@ export default function Page() {
       [key]: !prev[key],
     }));
 
-    setMapPanelTab("assets");
+    setMapPanelTab("partners");
   }
 
   const baseButtonClass =
@@ -650,21 +650,26 @@ export default function Page() {
   const inactiveButtonStyle = { background: "#2fa4df", color: "white" };
 
   return (
-    <main style={{ background: "#00285B" }} className="min-h-screen px-3 py-4 md:px-6 md:py-8">
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between md:mb-8">
-          <img
-            src="/logo.png"
-            alt="MapHorizon Logo"
-            className="h-10 w-auto md:h-[60px]"
-          />
+    <main
+      style={{ background: "#00285B" }}
+      className="min-h-screen px-3 py-4 md:px-6 md:py-8"
+    >
+      <div className="mx-auto w-full max-w-7xl">
+        <div className="mb-6 w-full rounded-2xl bg-white p-4 shadow-md md:mb-8 md:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <img
+              src="/logo.png"
+              alt="MapHorizon Logo"
+              className="h-10 w-auto object-contain md:h-[60px]"
+            />
 
-          <div className="text-left sm:ml-auto sm:text-right">
-            <h1 className="text-2xl font-bold leading-tight text-white md:text-4xl">
-              Social Value Opportunity Checker
-            </h1>
-            <div className="text-sm text-blue-100 md:text-base">
-              Powered by MapHorizon Geospatial Intelligence
+            <div className="text-left sm:ml-auto sm:text-right">
+              <h1 className="text-2xl font-bold leading-tight text-black md:text-4xl">
+                Social Value Opportunity Checker
+              </h1>
+              <div className="text-sm text-black md:text-base">
+                Powered by MapHorizon Geospatial Intelligence
+              </div>
             </div>
           </div>
         </div>
@@ -708,7 +713,7 @@ export default function Page() {
                 value={postcode}
                 onChange={(e) => setPostcode(e.target.value)}
                 placeholder="Enter CH postcode"
-                className="flex-1 rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
+                className="flex-1 rounded-xl border border-slate-300 px-4 py-3 text-sm text-black outline-none focus:border-slate-500"
               />
               <button
                 type="submit"
@@ -733,7 +738,7 @@ export default function Page() {
         )}
 
         {!loading && (
-          <div className="grid items-start gap-4 lg:grid-cols-[1.02fr_0.98fr] md:gap-6">
+          <div className="grid items-start gap-4 md:gap-6 lg:grid-cols-[1.02fr_0.98fr]">
             <div className="flex flex-col">
               <div className="overflow-hidden rounded-2xl bg-white shadow-md">
                 <div className="h-[40vh] min-h-[300px] max-h-[430px] md:h-[70vh]">
@@ -766,21 +771,21 @@ export default function Page() {
 
                   <button
                     type="button"
-                    onClick={() => setMapPanelTab("assets")}
-                    className={`${baseButtonClass} w-full sm:w-auto`}
+                    onClick={() => setMapPanelTab("partners")}
+                    className={`${baseButtonClass} w-full sm:w-auto lg:hidden`}
                     style={
-                      mapPanelTab === "assets"
+                      mapPanelTab === "partners"
                         ? activeButtonStyle
                         : inactiveButtonStyle
                     }
                   >
-                    Assets
+                    Local Partners
                   </button>
                 </div>
 
                 {mapPanelTab === "layers" && (
                   <div>
-                    <div className="mb-2 font-semibold">Map Layer</div>
+                    <div className="mb-2 font-semibold text-black">Map Layer</div>
 
                     <div className="flex flex-wrap gap-2">
                       {[
@@ -812,119 +817,168 @@ export default function Page() {
                     <div className="mt-3 rounded-xl bg-slate-50 px-3 py-3 text-slate-700">
                       <strong>Layer Description:</strong> {layerDescription(mapLayer)}
                     </div>
+
+                    <div className="mt-4">
+                      <strong className="text-black">Legend</strong>
+
+                      {mapLayer !== "none" && (
+                        <div className="mt-3">
+                          <div className="mb-2 font-semibold text-black">
+                            Map Legend
+                          </div>
+
+                          <div className="flex flex-wrap gap-3">
+                            {(mapLayer === "imd" ||
+                              mapLayer === "income" ||
+                              mapLayer === "employment" ||
+                              mapLayer === "education" ||
+                              mapLayer === "health") && (
+                              <>
+                                <span>
+                                  <span style={{ color: "#7f1d1d" }}>■</span> Higher
+                                  Need
+                                </span>
+                                <span>
+                                  <span style={{ color: "#f97316" }}>■</span> Medium
+                                </span>
+                                <span>
+                                  <span style={{ color: "#22c55e" }}>■</span> Lower
+                                  Need
+                                </span>
+                              </>
+                            )}
+
+                            {mapLayer === "fuel" && (
+                              <>
+                                <span>
+                                  <span style={{ color: "#16a34a" }}>■</span> Lower
+                                </span>
+                                <span>
+                                  <span style={{ color: "#facc15" }}>■</span> Medium
+                                </span>
+                                <span>
+                                  <span style={{ color: "#7f1d1d" }}>■</span> Higher
+                                </span>
+                              </>
+                            )}
+
+                            {mapLayer === "jobs" && (
+                              <>
+                                <span>
+                                  <span style={{ color: "#7f1d1d" }}>■</span> Poor
+                                  Access
+                                </span>
+                                <span>
+                                  <span style={{ color: "#facc15" }}>■</span> Medium
+                                </span>
+                                <span>
+                                  <span style={{ color: "#16a34a" }}>■</span> Better
+                                  Access
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {activePoiLegend.length > 0 && (
+                        <div className="mt-3">
+                          <div className="mb-2 font-semibold text-black">
+                            Community Asset Legend
+                          </div>
+                          <div className="flex flex-wrap gap-3">
+                            {activePoiLegend.map((item) => (
+                              <span key={item.label}>
+                                <span style={{ color: item.color }}>●</span>{" "}
+                                {item.label}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {mapLayer === "none" && activePoiLegend.length === 0 && (
+                        <div className="mt-2 text-slate-600">
+                          Turn on a map layer or community asset to populate the
+                          legend.
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
-                {mapPanelTab === "assets" && (
-                  <div>
-                    <div className="mb-2 font-semibold">Community Assets</div>
+                {mapPanelTab === "partners" && (
+                  <div className="lg:hidden">
+                    {hasSelection ? (
+                      <>
+                        <strong className="text-black">Local Partners</strong>
+                        <div className="mt-2 text-sm text-slate-600">
+                          Based on the strongest local themes, these are the most
+                          relevant assets to review and, where appropriate, turn on
+                          in the map.
+                        </div>
 
-                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                      <label className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                        <input
-                          type="checkbox"
-                          checked={poiToggles.skills}
-                          onChange={() =>
-                            setPoiToggles((prev) => ({
-                              ...prev,
-                              skills: !prev.skills,
-                            }))
-                          }
-                        />
-                        Skills Providers
-                      </label>
+                        <div className="mt-3 space-y-3">
+                          {recommendedAssets.map((asset) => {
+                            const isToggleable = Boolean(asset.key);
+                            const isOn = asset.key ? poiToggles[asset.key] : false;
 
-                      <label className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                        <input
-                          type="checkbox"
-                          checked={poiToggles.youth}
-                          onChange={() =>
-                            setPoiToggles((prev) => ({
-                              ...prev,
-                              youth: !prev.youth,
-                            }))
-                          }
-                        />
-                        Youth Provision
-                      </label>
+                            return (
+                              <div
+                                key={asset.label}
+                                className="rounded-xl border border-slate-200 bg-slate-50 p-3"
+                              >
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                  <div>
+                                    <div className="font-semibold text-black">
+                                      {asset.label}
+                                    </div>
+                                    <div className="mt-1 text-sm text-slate-600">
+                                      {asset.reason}
+                                    </div>
+                                  </div>
 
-                      <label className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                        <input
-                          type="checkbox"
-                          checked={poiToggles.community}
-                          onChange={() =>
-                            setPoiToggles((prev) => ({
-                              ...prev,
-                              community: !prev.community,
-                            }))
-                          }
-                        />
-                        Community Centres
-                      </label>
+                                  {isToggleable ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleRecommendedAsset(asset)}
+                                      className="w-full shrink-0 rounded-lg px-3 py-2 text-sm text-white sm:w-auto"
+                                      style={{
+                                        background: isOn ? "#00285B" : "#2fa4df",
+                                      }}
+                                    >
+                                      {isOn ? "Hide On Map" : "Show On Map"}
+                                    </button>
+                                  ) : (
+                                    <div className="w-full shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-center text-xs text-slate-500 sm:w-auto">
+                                      Reference Layer
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
 
-                      <label className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                        <input
-                          type="checkbox"
-                          checked={poiToggles.foodbanks}
-                          onChange={() =>
-                            setPoiToggles((prev) => ({
-                              ...prev,
-                              foodbanks: !prev.foodbanks,
-                            }))
-                          }
-                        />
-                        Foodbanks
-                      </label>
-
-                      <label className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                        <input
-                          type="checkbox"
-                          checked={poiToggles.gps}
-                          onChange={() =>
-                            setPoiToggles((prev) => ({
-                              ...prev,
-                              gps: !prev.gps,
-                            }))
-                          }
-                        />
-                        GP Surgeries
-                      </label>
-
-                      <label className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
-                        <input
-                          type="checkbox"
-                          checked={poiToggles.hospitals}
-                          onChange={() =>
-                            setPoiToggles((prev) => ({
-                              ...prev,
-                              hospitals: !prev.hospitals,
-                            }))
-                          }
-                        />
-                        Hospitals
-                      </label>
-
-                      <label className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 sm:col-span-2">
-                        <input
-                          type="checkbox"
-                          checked={poiToggles.schools}
-                          onChange={() =>
-                            setPoiToggles((prev) => ({
-                              ...prev,
-                              schools: !prev.schools,
-                            }))
-                          }
-                        />
-                        Schools / Colleges
-                      </label>
-                    </div>
+                        <div className="mt-3 text-sm text-slate-600">
+                          This links <strong>priority themes</strong> to
+                          <strong> local delivery assets</strong>, making the output
+                          more practical for TOMS-aligned interventions,
+                          partnerships and bids.
+                        </div>
+                      </>
+                    ) : (
+                      <div className="rounded-xl bg-slate-50 p-4 text-sm text-slate-700">
+                        Select a postcode or site to populate local partners.
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
 
               {hasSelection && (
-                <div className="mt-3 rounded-2xl bg-white p-4 text-sm shadow-md lg:hidden">
-                  <strong>Local Partners</strong>
+                <div className="mt-3 hidden rounded-2xl bg-white p-4 text-sm shadow-md lg:block">
+                  <strong className="text-black">Local Partners</strong>
                   <div className="mt-2 text-sm text-slate-600">
                     Based on the strongest local themes, these are the most
                     relevant assets to review and, where appropriate, turn on in
@@ -941,9 +995,11 @@ export default function Page() {
                           key={asset.label}
                           className="rounded-xl border border-slate-200 bg-slate-50 p-3"
                         >
-                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
                             <div>
-                              <div className="font-semibold">{asset.label}</div>
+                              <div className="font-semibold text-black">
+                                {asset.label}
+                              </div>
                               <div className="mt-1 text-sm text-slate-600">
                                 {asset.reason}
                               </div>
@@ -953,7 +1009,7 @@ export default function Page() {
                               <button
                                 type="button"
                                 onClick={() => toggleRecommendedAsset(asset)}
-                                className="w-full shrink-0 rounded-lg px-3 py-2 text-sm text-white sm:w-auto"
+                                className="shrink-0 rounded-lg px-3 py-2 text-sm text-white"
                                 style={{
                                   background: isOn ? "#00285B" : "#2fa4df",
                                 }}
@@ -961,7 +1017,7 @@ export default function Page() {
                                 {isOn ? "Hide On Map" : "Show On Map"}
                               </button>
                             ) : (
-                              <div className="w-full shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-center text-xs text-slate-500 sm:w-auto">
+                              <div className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500">
                                 Reference Layer
                               </div>
                             )}
@@ -979,93 +1035,15 @@ export default function Page() {
                   </div>
                 </div>
               )}
-
-              <div className="mt-3 rounded-2xl bg-white p-4 text-sm shadow-md lg:hidden">
-                <strong>Legend</strong>
-
-                {mapLayer !== "none" && (
-                  <div className="mt-3">
-                    <div className="mb-2 font-semibold">Map Legend</div>
-
-                    <div className="flex flex-wrap gap-3">
-                      {(mapLayer === "imd" ||
-                        mapLayer === "income" ||
-                        mapLayer === "employment" ||
-                        mapLayer === "education" ||
-                        mapLayer === "health") && (
-                        <>
-                          <span>
-                            <span style={{ color: "#7f1d1d" }}>■</span> Higher Need
-                          </span>
-                          <span>
-                            <span style={{ color: "#f97316" }}>■</span> Medium
-                          </span>
-                          <span>
-                            <span style={{ color: "#22c55e" }}>■</span> Lower Need
-                          </span>
-                        </>
-                      )}
-
-                      {mapLayer === "fuel" && (
-                        <>
-                          <span>
-                            <span style={{ color: "#16a34a" }}>■</span> Lower
-                          </span>
-                          <span>
-                            <span style={{ color: "#facc15" }}>■</span> Medium
-                          </span>
-                          <span>
-                            <span style={{ color: "#7f1d1d" }}>■</span> Higher
-                          </span>
-                        </>
-                      )}
-
-                      {mapLayer === "jobs" && (
-                        <>
-                          <span>
-                            <span style={{ color: "#7f1d1d" }}>■</span> Poor Access
-                          </span>
-                          <span>
-                            <span style={{ color: "#facc15" }}>■</span> Medium
-                          </span>
-                          <span>
-                            <span style={{ color: "#16a34a" }}>■</span> Better
-                            Access
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {activePoiLegend.length > 0 && (
-                  <div className="mt-3">
-                    <div className="mb-2 font-semibold">Community Asset Legend</div>
-                    <div className="flex flex-wrap gap-3">
-                      {activePoiLegend.map((item) => (
-                        <span key={item.label}>
-                          <span style={{ color: item.color }}>●</span> {item.label}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {mapLayer === "none" && activePoiLegend.length === 0 && (
-                  <div className="mt-2 text-slate-600">
-                    Turn on a map layer or community asset to populate the legend.
-                  </div>
-                )}
-              </div>
             </div>
 
             <div className="rounded-2xl bg-white p-4 shadow-md md:p-6">
-              <h2 className="mb-3 break-words text-xl font-semibold md:text-2xl">
+              <h2 className="mb-3 break-words text-xl font-semibold text-black md:text-2xl">
                 {selectedAreaLabel}
               </h2>
 
               {hasSelection && (
-                <div className="mb-4 text-sm">
+                <div className="mb-4 text-sm text-black">
                   {lookupMode === "postcode" ? (
                     <>
                       <div>
@@ -1122,17 +1100,17 @@ export default function Page() {
                   </div>
 
                   <div className="mb-5">
-                    <strong>Theme Scores</strong>
+                    <strong className="text-black">Theme Scores</strong>
                     <div className="mt-3 grid grid-cols-2 gap-3">
                       {scoreCards.map((card) => (
                         <div
                           key={card.label}
                           className="rounded-xl border border-slate-200 bg-slate-50 p-3"
                         >
-                          <div className="text-xs font-semibold md:text-sm">
+                          <div className="text-xs font-semibold text-black md:text-sm">
                             {card.label}
                           </div>
-                          <div className="mt-1 text-xl font-bold md:text-2xl">
+                          <div className="mt-1 text-xl font-bold text-black md:text-2xl">
                             {card.value}
                           </div>
                           <div className="mt-1 text-xs text-slate-600">
@@ -1144,8 +1122,8 @@ export default function Page() {
                   </div>
 
                   <div className="mb-5">
-                    <strong>Priority Themes Ranked</strong>
-                    <ul className="mt-2 list-disc pl-5">
+                    <strong className="text-black">Priority Themes Ranked</strong>
+                    <ul className="mt-2 list-disc pl-5 text-black">
                       {top.map((t) => (
                         <li key={t.name}>
                           {t.name} ({t.value}) —{" "}
@@ -1213,18 +1191,18 @@ export default function Page() {
                     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                       {detailTab === "toms" && (
                         <div>
-                          <strong>TOMS Alignment</strong>
+                          <strong className="text-black">TOMS Alignment</strong>
                           <div className="mt-3 overflow-x-auto">
                             <table className="w-full min-w-[420px] border-collapse text-sm">
                               <thead>
                                 <tr className="bg-slate-100">
-                                  <th className="border border-slate-200 p-2 text-left">
+                                  <th className="border border-slate-200 p-2 text-left text-black">
                                     Theme
                                   </th>
-                                  <th className="border border-slate-200 p-2 text-left">
+                                  <th className="border border-slate-200 p-2 text-left text-black">
                                     TOMS Codes
                                   </th>
-                                  <th className="border border-slate-200 p-2 text-left">
+                                  <th className="border border-slate-200 p-2 text-left text-black">
                                     Score
                                   </th>
                                 </tr>
@@ -1232,13 +1210,13 @@ export default function Page() {
                               <tbody>
                                 {top.map((t) => (
                                   <tr key={t.name}>
-                                    <td className="border border-slate-200 p-2">
+                                    <td className="border border-slate-200 p-2 text-black">
                                       {t.name}
                                     </td>
-                                    <td className="border border-slate-200 p-2">
+                                    <td className="border border-slate-200 p-2 text-black">
                                       {t.toms}
                                     </td>
-                                    <td className="border border-slate-200 p-2">
+                                    <td className="border border-slate-200 p-2 text-black">
                                       {t.value}
                                     </td>
                                   </tr>
@@ -1251,8 +1229,10 @@ export default function Page() {
 
                       {detailTab === "why" && (
                         <div>
-                          <strong>Why This Theme Matters Locally</strong>
-                          <ul className="mt-3 list-disc pl-5">
+                          <strong className="text-black">
+                            Why This Theme Matters Locally
+                          </strong>
+                          <ul className="mt-3 list-disc pl-5 text-black">
                             {top.map((t) => (
                               <li key={t.name}>
                                 <strong>{t.name}:</strong> {t.why}
@@ -1264,8 +1244,10 @@ export default function Page() {
 
                       {detailTab === "actions" && (
                         <div>
-                          <strong>Suggested Interventions</strong>
-                          <ul className="mt-3 list-disc pl-5">
+                          <strong className="text-black">
+                            Suggested Interventions
+                          </strong>
+                          <ul className="mt-3 list-disc pl-5 text-black">
                             {top.flatMap((t) => t.actions).map((a, i) => (
                               <li key={i}>{a}</li>
                             ))}
@@ -1276,7 +1258,9 @@ export default function Page() {
                       {detailTab === "method" && (
                         <div>
                           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <strong>How This Score Is Calculated</strong>
+                            <strong className="text-black">
+                              How This Score Is Calculated
+                            </strong>
                             <button
                               type="button"
                               onClick={() => setShowMethodology(!showMethodology)}
@@ -1287,7 +1271,7 @@ export default function Page() {
                             </button>
                           </div>
 
-                          <p className="mt-3 text-sm">
+                          <p className="mt-3 text-sm text-black">
                             The Overall Materiality Score is an indicative
                             screening score out of 100. It combines five themes
                             aligned to TOMS-related social and environmental
@@ -1296,7 +1280,7 @@ export default function Page() {
 
                           {showMethodology && (
                             <>
-                              <ul className="mt-3 list-disc pl-5 text-sm">
+                              <ul className="mt-3 list-disc pl-5 text-sm text-black">
                                 <li>
                                   <strong>Economic Inclusion</strong> — Income
                                   deprivation, employment deprivation, and access
@@ -1324,7 +1308,7 @@ export default function Page() {
                                 </li>
                               </ul>
 
-                              <p className="mt-3 text-sm">
+                              <p className="mt-3 text-sm text-black">
                                 <strong>Weighting</strong>
                                 <br />
                                 Economic Inclusion 25%
@@ -1338,7 +1322,7 @@ export default function Page() {
                                 Environmental Sustainability 15%
                               </p>
 
-                              <p className="mt-3 text-sm">
+                              <p className="mt-3 text-sm text-black">
                                 <strong>Environmental Theme Logic</strong>
                                 <br />
                                 `has_greenspace = 1` contributes a moderate
@@ -1356,149 +1340,6 @@ export default function Page() {
                             supports early-stage screening, targeting and
                             TOMS-aligned intervention planning.
                           </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="hidden lg:block">
-                    <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 text-sm shadow-sm">
-                      <strong>Local Partners</strong>
-                      <div className="mt-2 text-sm text-slate-600">
-                        Based on the strongest local themes, these are the most
-                        relevant assets to review and, where appropriate, turn on
-                        in the map.
-                      </div>
-
-                      <div className="mt-3 space-y-3">
-                        {recommendedAssets.map((asset) => {
-                          const isToggleable = Boolean(asset.key);
-                          const isOn = asset.key ? poiToggles[asset.key] : false;
-
-                          return (
-                            <div
-                              key={asset.label}
-                              className="rounded-xl border border-slate-200 bg-slate-50 p-3"
-                            >
-                              <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-                                <div>
-                                  <div className="font-semibold">{asset.label}</div>
-                                  <div className="mt-1 text-sm text-slate-600">
-                                    {asset.reason}
-                                  </div>
-                                </div>
-
-                                {isToggleable ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => toggleRecommendedAsset(asset)}
-                                    className="shrink-0 rounded-lg px-3 py-2 text-sm text-white"
-                                    style={{
-                                      background: isOn ? "#00285B" : "#2fa4df",
-                                    }}
-                                  >
-                                    {isOn ? "Hide On Map" : "Show On Map"}
-                                  </button>
-                                ) : (
-                                  <div className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500">
-                                    Reference Layer
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      <div className="mt-3 text-sm text-slate-600">
-                        This links <strong>priority themes</strong> to
-                        <strong> local delivery assets</strong>, making the output
-                        more practical for TOMS-aligned interventions,
-                        partnerships and bids.
-                      </div>
-                    </div>
-
-                    <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 text-sm shadow-sm">
-                      <strong>Legend</strong>
-
-                      {mapLayer !== "none" && (
-                        <div className="mt-3">
-                          <div className="mb-2 font-semibold">Map Legend</div>
-
-                          <div className="flex flex-wrap gap-4">
-                            {(mapLayer === "imd" ||
-                              mapLayer === "income" ||
-                              mapLayer === "employment" ||
-                              mapLayer === "education" ||
-                              mapLayer === "health") && (
-                              <>
-                                <span>
-                                  <span style={{ color: "#7f1d1d" }}>■</span> Higher
-                                  Need
-                                </span>
-                                <span>
-                                  <span style={{ color: "#f97316" }}>■</span> Medium
-                                </span>
-                                <span>
-                                  <span style={{ color: "#22c55e" }}>■</span> Lower
-                                  Need
-                                </span>
-                              </>
-                            )}
-
-                            {mapLayer === "fuel" && (
-                              <>
-                                <span>
-                                  <span style={{ color: "#16a34a" }}>■</span> Lower
-                                </span>
-                                <span>
-                                  <span style={{ color: "#facc15" }}>■</span> Medium
-                                </span>
-                                <span>
-                                  <span style={{ color: "#7f1d1d" }}>■</span> Higher
-                                </span>
-                              </>
-                            )}
-
-                            {mapLayer === "jobs" && (
-                              <>
-                                <span>
-                                  <span style={{ color: "#7f1d1d" }}>■</span> Poor
-                                  Access
-                                </span>
-                                <span>
-                                  <span style={{ color: "#facc15" }}>■</span> Medium
-                                </span>
-                                <span>
-                                  <span style={{ color: "#16a34a" }}>■</span> Better
-                                  Access
-                                </span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {activePoiLegend.length > 0 && (
-                        <div className="mt-3">
-                          <div className="mb-2 font-semibold">
-                            Community Asset Legend
-                          </div>
-                          <div className="flex flex-wrap gap-4">
-                            {activePoiLegend.map((item) => (
-                              <span key={item.label}>
-                                <span style={{ color: item.color }}>●</span>{" "}
-                                {item.label}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {mapLayer === "none" && activePoiLegend.length === 0 && (
-                        <div className="mt-2 text-slate-600">
-                          Turn on a map layer or community asset to populate the
-                          legend.
                         </div>
                       )}
                     </div>
