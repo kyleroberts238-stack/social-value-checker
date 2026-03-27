@@ -474,9 +474,10 @@ export default function Page() {
   const [selectedLookupRow, setSelectedLookupRow] = useState<LookupRow | null>(
     null
   );
-  const [siteCoords, setSiteCoords] = useState<{ lng: number; lat: number } | null>(
-    null
-  );
+  const [siteCoords, setSiteCoords] = useState<{
+    lng: number;
+    lat: number;
+  } | null>(null);
   const [siteNearestPostcode, setSiteNearestPostcode] = useState<string | null>(
     null
   );
@@ -655,25 +656,25 @@ export default function Page() {
     >
       <div className="mx-auto w-full max-w-7xl">
         <div className="mb-6 w-full rounded-2xl bg-white p-4 shadow-md md:mb-8 md:p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex w-full flex-col items-center justify-center gap-3 text-center">
             <img
               src="/logo.png"
               alt="MapHorizon Logo"
               className="h-10 w-auto object-contain md:h-[60px]"
             />
 
-            <div className="text-left sm:ml-auto sm:text-right">
+            <div className="w-full text-center">
               <h1 className="text-2xl font-bold leading-tight text-black md:text-4xl">
                 Social Value Opportunity Checker
               </h1>
-              <div className="text-sm text-black md:text-base">
+              <div className="mt-1 text-sm text-black md:text-base">
                 Powered by MapHorizon Geospatial Intelligence
               </div>
             </div>
           </div>
         </div>
 
-        <div className="mb-6 rounded-2xl bg-white p-4 shadow-md md:p-6">
+        <div className="mb-6 w-full rounded-2xl bg-white p-4 shadow-md md:p-6">
           <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <button
               type="button"
@@ -706,13 +707,13 @@ export default function Page() {
                 e.preventDefault();
                 searchPostcode();
               }}
-              className="flex flex-col gap-3 sm:flex-row"
+              className="flex w-full flex-col gap-3 sm:flex-row"
             >
               <input
                 value={postcode}
                 onChange={(e) => setPostcode(e.target.value)}
                 placeholder="Enter CH postcode"
-                className="flex-1 rounded-xl border border-slate-300 px-4 py-3 text-sm text-black outline-none focus:border-slate-500"
+                className="min-w-0 flex-1 rounded-xl border border-slate-300 px-4 py-3 text-sm text-black outline-none focus:border-slate-500"
               />
               <button
                 type="submit"
@@ -731,16 +732,16 @@ export default function Page() {
         </div>
 
         {loading && (
-          <div className="rounded-2xl bg-white p-4 shadow-md md:p-6">
+          <div className="w-full rounded-2xl bg-white p-4 shadow-md md:p-6">
             Loading data...
           </div>
         )}
 
         {!loading && (
-          <div className="grid items-start gap-4 md:gap-6 lg:grid-cols-[1.02fr_0.98fr]">
-            <div className="flex flex-col">
+          <div className="grid w-full items-start gap-4 md:gap-6 lg:grid-cols-[1.02fr_0.98fr]">
+            <div className="flex min-w-0 flex-col">
               <div className="overflow-hidden rounded-2xl bg-white shadow-md">
-                <div className="h-[40vh] min-h-[300px] max-h-[430px] md:h-[70vh]">
+                <div className="h-[52vh] min-h-[380px] max-h-[620px] md:h-[70vh]">
                   <MapView
                     lat={selectedPoint.lat}
                     lng={selectedPoint.lng}
@@ -976,7 +977,7 @@ export default function Page() {
               </div>
             </div>
 
-            <div className="rounded-2xl bg-white p-4 shadow-md md:p-6">
+            <div className="min-w-0 rounded-2xl bg-white p-4 shadow-md md:p-6">
               <h2 className="mb-3 break-words text-xl font-semibold text-black md:text-2xl">
                 {selectedAreaLabel}
               </h2>
