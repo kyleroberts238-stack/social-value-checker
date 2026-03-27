@@ -669,7 +669,7 @@ export default function MapView({
       style={{
         position: "relative",
         width: "100%",
-        height: "520px",
+        height: "100%",
         borderRadius: "16px",
         overflow: "hidden",
         background: "#e5e7eb",
@@ -689,6 +689,7 @@ export default function MapView({
             position: "absolute",
             top: "12px",
             left: "12px",
+            right: "12px",
             zIndex: 10,
             background: "rgba(255,255,255,0.96)",
             borderRadius: "10px",
@@ -696,7 +697,6 @@ export default function MapView({
             padding: "8px 10px",
             fontSize: "12px",
             fontFamily: "Segoe UI, Arial, sans-serif",
-            maxWidth: "260px",
           }}
         >
           Click the map to select a site location.
@@ -708,42 +708,73 @@ export default function MapView({
           style={{
             position: "absolute",
             left: "12px",
+            right: "12px",
             bottom: "12px",
             zIndex: 10,
-            background: "white",
-            borderRadius: "12px",
-            boxShadow: "0 6px 20px rgba(0,0,0,0.18)",
-            padding: "12px 14px",
-            minWidth: "250px",
-            maxWidth: "320px",
-            fontFamily: "Segoe UI, Arial, sans-serif",
-            fontSize: "13px",
-            lineHeight: 1.45,
           }}
         >
-          <div style={{ fontWeight: 700, marginBottom: "6px" }}>{areaName}</div>
-          <div>
-            <strong>IMD Decile:</strong> {popupData["IMD Decile"] ?? "N/A"}
-          </div>
-          <div>
-            <strong>Fuel Poverty:</strong>{" "}
-            {popupData["Households Fuel Poor (%)"] ?? "N/A"}%
-          </div>
-          <div>
-            <strong>Employment Access (30 Min PT/Walk):</strong>{" "}
-            {popupData["Users within 30 minutes of Employment by PT/walk (%)"] ??
-              "N/A"}
-            %
-          </div>
-          <div>
-            <strong>GP Access (15 Min PT/Walk):</strong>{" "}
-            {popupData["Users within 15 minutes of GPs by PT/walk (%)"] ?? "N/A"}%
-          </div>
-          <div>
-            <strong>Food Access (15 Min PT/Walk):</strong>{" "}
-            {popupData["Users within 15 minutes of Food Store by PT/walk (%)"] ??
-              "N/A"}
-            %
+          <div
+            style={{
+              width: "100%",
+              background: "rgba(255,255,255,0.97)",
+              borderRadius: "12px",
+              boxShadow: "0 6px 20px rgba(0,0,0,0.18)",
+              padding: "14px 16px",
+              fontFamily: "Segoe UI, Arial, sans-serif",
+              fontSize: "13px",
+              lineHeight: 1.45,
+              boxSizing: "border-box",
+            }}
+          >
+            <div
+              style={{
+                fontWeight: 700,
+                marginBottom: "8px",
+                fontSize: "14px",
+                color: "#111827",
+              }}
+            >
+              {areaName}
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                gap: "6px 18px",
+                color: "#111827",
+              }}
+            >
+              <div>
+                <strong>IMD Decile:</strong> {popupData["IMD Decile"] ?? "N/A"}
+              </div>
+
+              <div>
+                <strong>Fuel Poverty:</strong>{" "}
+                {popupData["Households Fuel Poor (%)"] ?? "N/A"}%
+              </div>
+
+              <div>
+                <strong>Employment Access (30 Min PT/Walk):</strong>{" "}
+                {popupData["Users within 30 minutes of Employment by PT/walk (%)"] ??
+                  "N/A"}
+                %
+              </div>
+
+              <div>
+                <strong>GP Access (15 Min PT/Walk):</strong>{" "}
+                {popupData["Users within 15 minutes of GPs by PT/walk (%)"] ??
+                  "N/A"}
+                %
+              </div>
+
+              <div>
+                <strong>Food Access (15 Min PT/Walk):</strong>{" "}
+                {popupData["Users within 15 minutes of Food Store by PT/walk (%)"] ??
+                  "N/A"}
+                %
+              </div>
+            </div>
           </div>
         </div>
       )}
