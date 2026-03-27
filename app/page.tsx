@@ -474,10 +474,9 @@ export default function Page() {
   const [selectedLookupRow, setSelectedLookupRow] = useState<LookupRow | null>(
     null
   );
-  const [siteCoords, setSiteCoords] = useState<{
-    lng: number;
-    lat: number;
-  } | null>(null);
+  const [siteCoords, setSiteCoords] = useState<{ lng: number; lat: number } | null>(
+    null
+  );
   const [siteNearestPostcode, setSiteNearestPostcode] = useState<string | null>(
     null
   );
@@ -772,7 +771,7 @@ export default function Page() {
                   <button
                     type="button"
                     onClick={() => setMapPanelTab("partners")}
-                    className={`${baseButtonClass} w-full sm:w-auto lg:hidden`}
+                    className={`${baseButtonClass} w-full sm:w-auto`}
                     style={
                       mapPanelTab === "partners"
                         ? activeButtonStyle
@@ -908,7 +907,7 @@ export default function Page() {
                 )}
 
                 {mapPanelTab === "partners" && (
-                  <div className="lg:hidden">
+                  <div>
                     {hasSelection ? (
                       <>
                         <strong className="text-black">Local Partners</strong>
@@ -975,66 +974,6 @@ export default function Page() {
                   </div>
                 )}
               </div>
-
-              {hasSelection && (
-                <div className="mt-3 hidden rounded-2xl bg-white p-4 text-sm shadow-md lg:block">
-                  <strong className="text-black">Local Partners</strong>
-                  <div className="mt-2 text-sm text-slate-600">
-                    Based on the strongest local themes, these are the most
-                    relevant assets to review and, where appropriate, turn on in
-                    the map.
-                  </div>
-
-                  <div className="mt-3 space-y-3">
-                    {recommendedAssets.map((asset) => {
-                      const isToggleable = Boolean(asset.key);
-                      const isOn = asset.key ? poiToggles[asset.key] : false;
-
-                      return (
-                        <div
-                          key={asset.label}
-                          className="rounded-xl border border-slate-200 bg-slate-50 p-3"
-                        >
-                          <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-                            <div>
-                              <div className="font-semibold text-black">
-                                {asset.label}
-                              </div>
-                              <div className="mt-1 text-sm text-slate-600">
-                                {asset.reason}
-                              </div>
-                            </div>
-
-                            {isToggleable ? (
-                              <button
-                                type="button"
-                                onClick={() => toggleRecommendedAsset(asset)}
-                                className="shrink-0 rounded-lg px-3 py-2 text-sm text-white"
-                                style={{
-                                  background: isOn ? "#00285B" : "#2fa4df",
-                                }}
-                              >
-                                {isOn ? "Hide On Map" : "Show On Map"}
-                              </button>
-                            ) : (
-                              <div className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500">
-                                Reference Layer
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  <div className="mt-3 text-sm text-slate-600">
-                    This links <strong>priority themes</strong> to
-                    <strong> local delivery assets</strong>, making the output
-                    more practical for TOMS-aligned interventions, partnerships
-                    and bids.
-                  </div>
-                </div>
-              )}
             </div>
 
             <div className="rounded-2xl bg-white p-4 shadow-md md:p-6">
