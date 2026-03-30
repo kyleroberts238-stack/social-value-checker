@@ -30,27 +30,6 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
 
-        <header
-          className="flex items-center gap-3 px-6 py-4 border-b"
-          style={{ background: "#00285B" }}
-        >
-          <img
-            src="/maphorizon-logo.svg"
-            alt="MapHorizon"
-            className="h-8"
-          />
-
-          <div className="text-white">
-            <div className="text-xs opacity-80">
-              MapHorizon
-            </div>
-
-            <div className="text-lg font-semibold">
-              Social Value Checker
-            </div>
-          </div>
-        </header>
-
         {children}
 
       </body>
