@@ -712,7 +712,7 @@ applySelectedFeature(lsoaMatch, {
               <input
                 value={postcode}
                 onChange={(e) => setPostcode(e.target.value)}
-                placeholder="Enter CH postcode"
+                placeholder="Enter Postcode"
                 className="min-w-0 flex-1 rounded-xl border border-slate-300 px-4 py-3 text-sm text-black outline-none focus:border-slate-500"
               />
               <button
