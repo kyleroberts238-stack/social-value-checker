@@ -324,8 +324,8 @@ function findClosestPostcode(
   for (const feature of lookup.features) {
     const props = feature.properties;
     const pcLat = Number(props?.lat);
-    const pcLng = Number(props?.lng);
-    const pc = props?.postcode;
+const pcLng = Number(props?.long);
+const pc = props?.pcd7;
 
     if (!pc || Number.isNaN(pcLat) || Number.isNaN(pcLng)) continue;
 
@@ -530,32 +530,32 @@ export default function Page() {
 
     const pc = postcode.trim().replace(/\s+/g, "").toUpperCase();
 
-    const found = lookup.features.find((f: any) => {
-      const candidate = String(f.properties?.postcode || "")
-        .replace(/\s+/g, "")
-        .toUpperCase();
-      return candidate === pc;
-    });
+const found = lookup.features.find((f: any) => {
+  const candidate = String(f.properties?.pcd7 || "")
+    .replace(/\s+/g, "")
+    .toUpperCase();
+  return candidate === pc;
+});
 
-    if (!found) {
-      alert("Postcode not found");
-      return;
-    }
+if (!found) {
+  alert("Postcode not found");
+  return;
+}
 
-    const props = found.properties;
-    setSelectedLookupRow(props);
-    setSiteCoords(null);
-    setSiteNearestPostcode(null);
+const props = found.properties;
+setSelectedLookupRow(props);
+setSiteCoords(null);
+setSiteNearestPostcode(null);
 
-    const lsoaCode = props.lsoa_code;
-    const lsoaMatch =
-      lsoa.features.find((f: any) => getFeatureLsoaCode(f.properties) === lsoaCode) ||
-      findLsoaByPoint(lsoa, Number(props.lng), Number(props.lat));
+const lsoaCode = props.lsoa21cd;
+const lsoaMatch =
+  lsoa.features.find((f: any) => getFeatureLsoaCode(f.properties) === lsoaCode) ||
+  findLsoaByPoint(lsoa, Number(props.long), Number(props.lat));
 
-    applySelectedFeature(lsoaMatch, {
-      lng: Number(props.lng),
-      lat: Number(props.lat),
-    });
+applySelectedFeature(lsoaMatch, {
+  lng: Number(props.long),
+  lat: Number(props.lat),
+});
   }
 
   useEffect(() => {
