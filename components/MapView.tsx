@@ -252,16 +252,12 @@ function buildPoiPopupHtml(feature: any, label: string) {
     firstDefined(props, ["website", "Website", "url", "URL", "web"]) || null;
 
   return `
-    <div style="font-family:Segoe UI,Arial,sans-serif;font-size:13px;line-height:1.45;min-width:220px;max-width:280px;">
-      <div style="font-weight:700;margin-bottom:6px;">${title}</div>
-      <div style="margin-bottom:4px;"><strong>Type:</strong> ${label}</div>
-      ${address ? `<div><strong>Address:</strong> ${address}</div>` : ""}
-      ${postcode ? `<div><strong>Postcode:</strong> ${postcode}</div>` : ""}
-      ${
-        website
-          ? `<div style="margin-top:6px;"><a href="${website}" target="_blank" rel="noopener noreferrer">Website</a></div>`
-          : ""
-      }
+    <div style="font-family:Segoe UI,Arial,sans-serif;font-size:13px;line-height:1.5;min-width:220px;max-width:280px;color:#000000;">
+      <div style="font-weight:700;margin-bottom:6px;color:#000000;">${title}</div>
+      <div style="margin-bottom:4px;color:#000000;"><strong>Type:</strong> ${label}</div>
+      ${address ? `<div style="color:#000000;"><strong>Address:</strong> ${address}</div>` : ""}
+      ${postcode ? `<div style="color:#000000;"><strong>Postcode:</strong> ${postcode}</div>` : ""}
+      ${website ? `<div style="margin-top:6px;"><a href="${website}" target="_blank" rel="noopener noreferrer" style="color:#00285B;font-weight:600;">Website</a></div>` : ""}
     </div>
   `;
 }
@@ -696,14 +692,16 @@ export default function MapView({
           <div
             style={{
               width: "100%",
-              background: "rgba(255,255,255,0.97)",
+              background: "rgba(255,255,255,0.98)",
               borderRadius: "12px",
               boxShadow: "0 6px 20px rgba(0,0,0,0.18)",
               padding: "14px 16px",
               fontFamily: "Segoe UI, Arial, sans-serif",
               fontSize: "13px",
-              lineHeight: 1.45,
+              lineHeight: 1.5,
               boxSizing: "border-box",
+              color: "#000000",
+              border: "1px solid rgba(15, 23, 42, 0.08)",
             }}
           >
             <div
@@ -711,7 +709,7 @@ export default function MapView({
                 fontWeight: 700,
                 marginBottom: "8px",
                 fontSize: "14px",
-                color: "#111827",
+                color: "#000000",
               }}
             >
               {areaName}
@@ -722,7 +720,7 @@ export default function MapView({
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
                 gap: "6px 18px",
-                color: "#111827",
+                color: "#000000",
               }}
             >
               <div>
