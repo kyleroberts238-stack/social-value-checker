@@ -18,11 +18,10 @@ type LookupRow = {
 };
 
 type Scores = {
-  economicInclusion: number;
-  skillsOpportunity: number;
-  healthWellbeing: number;
-  householdResilience: number;
-  environmentalSustainability: number;
+  work: number;
+  economy: number;
+  community: number;
+  planet: number;
   overallMateriality: number;
 };
 
@@ -50,30 +49,37 @@ type RecommendedAsset = {
 };
 
 type MapPanelTab = "layers" | "partners";
-type DetailTab = "toms" | "why" | "actions" | "method";
+type DetailTab = "themes" | "why" | "actions" | "method";
 
 const DEFAULT_CENTER = {
   lat: 53.2403,
   lng: -2.734,
 };
 
-function num(v: any) {
+function num(v: unknown) {
   return Number(String(v ?? "").replace("%", "").trim());
 }
 
+function safeNumber(v: number, fallback = 0) {
+  return Number.isFinite(v) ? v : fallback;
+}
+
 function decileNeed(d: number) {
-  return (11 - d) * 10;
+  const value = safeNumber(d, 10);
+  return Math.max(0, Math.min(100, (11 - value) * 10));
 }
 
 function pctNeed(p: number) {
-  return 100 - p;
+  const value = safeNumber(p, 100);
+  return Math.max(0, Math.min(100, 100 - value));
 }
 
 function fuelNeed(p: number) {
-  return Math.min(100, p * 5);
+  const value = safeNumber(p, 0);
+  return Math.max(0, Math.min(100, value * 5));
 }
 
-function environmentalScore(p: any) {
+function environmentalScore(p: Record<string, unknown>) {
   const hasGreenspace = Number(p["has_greenspace"] ?? 0);
   const hasPriorityHabitat = Number(p["has_priority_habitat"] ?? 0);
 
@@ -83,18 +89,14 @@ function environmentalScore(p: any) {
   return Math.round(greenspaceScore * 0.5 + habitatScore * 0.5);
 }
 
-function calcScores(p: any): Scores {
+function calcScores(p: Record<string, unknown>): Scores {
   const income = decileNeed(num(p["Income Decile"]));
   const employment = decileNeed(num(p["Employment Decile"]));
-  const education = decileNeed(
-    num(p["Education, Skills and Training Decile"])
-  );
-  const health = decileNeed(
-    num(p["Health Deprivation and Disability Decile"])
-  );
+  const education = decileNeed(num(p["Education, Skills and Training Decile"]));
+  const health = decileNeed(num(p["Health Deprivation and Disability Decile"]));
 
   const gp = pctNeed(num(p["Users within 15 minutes of GPs by PT/walk (%)"]));
-  const jobs = pctNeed(
+  const jobsAccess = pctNeed(
     num(p["Users within 30 minutes of Employment by PT/walk (%)"])
   );
   const food = pctNeed(
@@ -102,25 +104,23 @@ function calcScores(p: any): Scores {
   );
   const fuel = fuelNeed(num(p["Households Fuel Poor (%)"]));
 
-  const economicInclusion = income * 0.35 + employment * 0.35 + jobs * 0.3;
-  const skillsOpportunity = education * 0.6 + employment * 0.4;
-  const healthWellbeing = health * 0.6 + gp * 0.4;
-  const householdResilience = fuel * 0.5 + income * 0.3 + food * 0.2;
-  const environmentalSustainability = environmentalScore(p);
+  const work = employment * 0.45 + education * 0.35 + jobsAccess * 0.2;
+  const economy = income * 0.5 + employment * 0.25 + jobsAccess * 0.25;
+  const community = health * 0.35 + fuel * 0.25 + gp * 0.2 + food * 0.2;
+  const planet = environmentalScore(p);
 
-  const overallMateriality =
-    economicInclusion * 0.25 +
-    skillsOpportunity * 0.2 +
-    healthWellbeing * 0.2 +
-    householdResilience * 0.2 +
-    environmentalSustainability * 0.15;
+  const topThemeBonus = Math.max(work, economy, community, planet) >= 75 ? 5 : 0;
+
+  const overallMateriality = Math.min(
+    100,
+    work * 0.3 + economy * 0.25 + community * 0.3 + planet * 0.15 + topThemeBonus
+  );
 
   return {
-    economicInclusion: Math.round(economicInclusion),
-    skillsOpportunity: Math.round(skillsOpportunity),
-    healthWellbeing: Math.round(healthWellbeing),
-    householdResilience: Math.round(householdResilience),
-    environmentalSustainability: Math.round(environmentalSustainability),
+    work: Math.round(work),
+    economy: Math.round(economy),
+    community: Math.round(community),
+    planet: Math.round(planet),
     overallMateriality: Math.round(overallMateriality),
   };
 }
@@ -132,53 +132,41 @@ function band(v: number) {
 }
 
 function themes(scores: Scores): ThemeItem[] {
-  const t = [
+  const t: ThemeItem[] = [
     {
-      name: "Health And Wellbeing",
-      value: scores.healthWellbeing,
-      toms: "NT17, NT18",
+      name: "Work",
+      value: scores.work,
+      toms: "Work",
       why:
-        "Local health and accessibility indicators suggest relevance for wellbeing-focused initiatives that support community resilience and participation.",
+        "Employment access, labour market exclusion and skills deprivation suggest relevance for local hiring, apprenticeships and routes into work.",
+      actions: ["Local Hiring", "Apprenticeships", "Work Placements"],
+    },
+    {
+      name: "Economy",
+      value: scores.economy,
+      toms: "Economy",
+      why:
+        "Income and economic participation indicators suggest potential for inclusive growth, SME engagement and stronger local supply chain activity.",
+      actions: ["SME Procurement", "Local Supply Chain", "Enterprise Support"],
+    },
+    {
+      name: "Community",
+      value: scores.community,
+      toms: "Community",
+      why:
+        "Health, affordability and access indicators suggest scope for wellbeing, resilience and access-to-services interventions.",
       actions: [
-        "Community Wellbeing Programmes",
-        "Health Partnerships",
-        "Active Travel Initiatives",
-      ],
-    },
-    {
-      name: "Skills And Progression",
-      value: scores.skillsOpportunity,
-      toms: "NT11, NT12, NT13",
-      why:
-        "Education and employment indicators highlight opportunities to support skills development, early careers pathways and workforce participation.",
-      actions: ["Apprenticeships", "Work Placements", "School Outreach"],
-    },
-    {
-      name: "Economic Inclusion",
-      value: scores.economicInclusion,
-      toms: "NT1, NT2, NT10",
-      why:
-        "Economic participation indicators are generally favourable, with potential to reinforce inclusive access to employment and local supply chain opportunities.",
-      actions: ["Local Hiring", "SME Procurement", "Employability Partnerships"],
-    },
-    {
-      name: "Household Resilience",
-      value: scores.householdResilience,
-      toms: "NT18, NT19",
-      why:
-        "Household affordability indicators suggest relevance for initiatives supporting resilience, financial wellbeing and access to essential services.",
-      actions: [
+        "Community Wellbeing",
         "Fuel Poverty Support",
-        "Energy Advice",
-        "Community Resilience Programmes",
+        "Access to Services",
       ],
     },
     {
-      name: "Environmental Sustainability",
-      value: scores.environmentalSustainability,
-      toms: "NT30, NT31, NT33",
+      name: "Planet",
+      value: scores.planet,
+      toms: "Planet",
       why:
-        "Environmental context indicates potential relevance for biodiversity enhancement, access-to-nature improvements and wider environmental value interventions.",
+        "Environmental context indicates potential relevance for biodiversity enhancement, access to nature and place-based environmental improvement.",
       actions: [
         "Biodiversity Enhancement",
         "Greenspace Improvement",
@@ -204,7 +192,7 @@ function layerDescription(layer: MapLayer) {
     return "Employment deprivation. Indicates areas where exclusion from the labour market is more acute.";
   }
   if (layer === "education") {
-    return "Education, skills and training deprivation. Useful for identifying areas where skills investment may be material.";
+    return "Education, skills and training deprivation. Useful for identifying areas where skills investment may be more material.";
   }
   if (layer === "health") {
     return "Health deprivation and disability. Highlights areas with greater health and wellbeing pressures.";
@@ -215,7 +203,7 @@ function layerDescription(layer: MapLayer) {
   return "Employment accessibility by public transport and walking within 30 minutes. Lower access suggests greater mobility constraints.";
 }
 
-function getFeatureLsoaCode(properties: any) {
+function getFeatureLsoaCode(properties: Record<string, unknown>) {
   return (
     properties?.["LSOA21CD"] ||
     properties?.["LSOA11CD"] ||
@@ -296,7 +284,7 @@ function toRad(value: number) {
 }
 
 function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number) {
-  const R = 6371;
+  const r = 6371;
   const dLat = toRad(lat2 - lat1);
   const dLng = toRad(lng2 - lng1);
 
@@ -308,14 +296,10 @@ function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number) {
       Math.sin(dLng / 2);
 
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
+  return r * c;
 }
 
-function findClosestPostcode(
-  lookup: any,
-  lat: number,
-  lng: number
-): string | null {
+function findClosestPostcode(lookup: any, lat: number, lng: number): string | null {
   if (!lookup?.features?.length) return null;
 
   let bestPostcode: string | null = null;
@@ -324,13 +308,12 @@ function findClosestPostcode(
   for (const feature of lookup.features) {
     const props = feature.properties;
     const pcLat = Number(props?.lat);
-const pcLng = Number(props?.long);
-const pc = props?.pcd7;
+    const pcLng = Number(props?.long);
+    const pc = props?.pcd7;
 
     if (!pc || Number.isNaN(pcLat) || Number.isNaN(pcLng)) continue;
 
     const d = distanceKm(lat, lng, pcLat, pcLng);
-
     if (d < bestDistance) {
       bestDistance = d;
       bestPostcode = pc;
@@ -340,90 +323,69 @@ const pc = props?.pcd7;
   return bestPostcode;
 }
 
-function recommendedAssetsFromThemes(
-  topThemes: ThemeItem[]
-): RecommendedAsset[] {
+function recommendedAssetsFromThemes(topThemes: ThemeItem[]): RecommendedAsset[] {
   const assetMap: Record<string, RecommendedAsset[]> = {
-    "Economic Inclusion": [
+    Work: [
       {
         label: "Skills Providers",
         key: "skills",
         reason:
-          "Useful for employability pathways, local skills activity and access to work support.",
+          "Useful for employability pathways, training activity and routes into work.",
       },
-      {
-        label: "Community Centres",
-        key: "community",
-        reason:
-          "Can support outreach, local delivery and inclusive community-based programmes.",
-      },
-    ],
-    "Skills And Progression": [
       {
         label: "Schools / Colleges",
         key: "schools",
         reason:
-          "Relevant for school engagement, careers pathways, outreach and education-linked interventions.",
-      },
-      {
-        label: "Skills Providers",
-        key: "skills",
-        reason:
-          "Relevant for training provision, apprenticeships and employability support.",
+          "Relevant for careers engagement, outreach and early talent pipelines.",
       },
       {
         label: "Youth Provision",
         key: "youth",
         reason:
-          "Useful for early careers, mentoring and youth-focused opportunity creation.",
+          "Useful for mentoring, aspiration-building and youth-focused opportunity creation.",
       },
     ],
-    "Health And Wellbeing": [
+    Economy: [
+      {
+        label: "Community Centres",
+        key: "community",
+        reason:
+          "Can support local enterprise outreach, community delivery and place-based partnership activity.",
+      },
+      {
+        label: "Skills Providers",
+        key: "skills",
+        reason:
+          "Helpful where economic participation is linked to skills support and workforce development.",
+      },
+    ],
+    Community: [
       {
         label: "GP Surgeries",
         key: "gps",
         reason:
-          "Helpful for understanding local health service presence and wellbeing-related context.",
+          "Helpful for understanding local health service presence and wider wellbeing context.",
       },
       {
         label: "Hospitals",
         key: "hospitals",
         reason:
-          "Relevant where wider health infrastructure and access are part of local need.",
+          "Relevant where broader health access and resilience pressures are part of the picture.",
       },
-      {
-        label: "Community Centres",
-        key: "community",
-        reason:
-          "Can support social prescribing, wellbeing delivery and trusted local engagement.",
-      },
-      {
-        label: "Greenspace",
-        reason:
-          "Relevant for active travel, access to nature and healthier community environments.",
-      },
-    ],
-    "Household Resilience": [
       {
         label: "Foodbanks",
         key: "foodbanks",
         reason:
-          "Useful indicator of immediate household support need and community resilience pressure.",
+          "Useful indicator of immediate household support need and resilience pressure.",
       },
       {
         label: "Community Centres",
         key: "community",
         reason:
-          "Can support advice services, resilience programmes and trusted local delivery.",
-      },
-      {
-        label: "GP Surgeries",
-        key: "gps",
-        reason:
-          "Helpful where health, hardship and household vulnerability intersect.",
+          "Can support advice services, community delivery and trusted local engagement.",
       },
     ],
-    "Environmental Sustainability": [
+    Planet: [
       {
         label: "Greenspace",
         reason:
@@ -438,7 +400,7 @@ function recommendedAssetsFromThemes(
         label: "Community Centres",
         key: "community",
         reason:
-          "Can support local stewardship, volunteering and nature-based community projects.",
+          "Can support stewardship, volunteering and local environmental activity.",
       },
     ],
   };
@@ -467,20 +429,15 @@ export default function Page() {
   const [mapLayer, setMapLayer] = useState<MapLayer>("none");
   const [showMethodology, setShowMethodology] = useState(false);
   const [mapPanelTab, setMapPanelTab] = useState<MapPanelTab>("layers");
-  const [detailTab, setDetailTab] = useState<DetailTab>("toms");
+  const [detailTab, setDetailTab] = useState<DetailTab>("themes");
 
   const [selectedPoint, setSelectedPoint] = useState(DEFAULT_CENTER);
   const [selectedLsoaProps, setSelectedLsoaProps] = useState<any>(null);
-  const [selectedLookupRow, setSelectedLookupRow] = useState<LookupRow | null>(
+  const [selectedLookupRow, setSelectedLookupRow] = useState<LookupRow | null>(null);
+  const [siteCoords, setSiteCoords] = useState<{ lng: number; lat: number } | null>(
     null
   );
-  const [siteCoords, setSiteCoords] = useState<{
-    lng: number;
-    lat: number;
-  } | null>(null);
-  const [siteNearestPostcode, setSiteNearestPostcode] = useState<string | null>(
-    null
-  );
+  const [siteNearestPostcode, setSiteNearestPostcode] = useState<string | null>(null);
 
   const [scores, setScores] = useState<Scores | null>(null);
   const [top, setTop] = useState<ThemeItem[]>([]);
@@ -507,22 +464,21 @@ export default function Page() {
   }, []);
 
   function applySelectedFeature(feature: any, point: { lng: number; lat: number }) {
+    setSelectedPoint({ lat: point.lat, lng: point.lng });
+    setShowMethodology(false);
+
     if (!feature) {
       setSelectedLsoaProps(null);
       setScores(null);
       setTop([]);
-      setShowMethodology(false);
-      setSelectedPoint({ lat: point.lat, lng: point.lng });
       return;
     }
 
-    setSelectedPoint({ lat: point.lat, lng: point.lng });
     setSelectedLsoaProps(feature.properties);
 
     const s = calcScores(feature.properties);
     setScores(s);
     setTop(themes(s));
-    setShowMethodology(false);
   }
 
   function searchPostcode() {
@@ -530,43 +486,39 @@ export default function Page() {
 
     const pc = postcode.trim().replace(/\s+/g, "").toUpperCase();
 
-const found = lookup.features.find((f: any) => {
-  const candidate = String(f.properties?.pcd7 || "")
-    .replace(/\s+/g, "")
-    .toUpperCase();
-  return candidate === pc;
-});
+    const found = lookup.features.find((f: any) => {
+      const candidate = String(f.properties?.pcd7 || "")
+        .replace(/\s+/g, "")
+        .toUpperCase();
+      return candidate === pc;
+    });
 
-if (!found) {
-  alert("Postcode not found");
-  return;
-}
+    if (!found) {
+      alert("Postcode not found");
+      return;
+    }
 
-const props = found.properties;
-setSelectedLookupRow(props);
-setSiteCoords(null);
-setSiteNearestPostcode(null);
+    const props = found.properties;
+    setSelectedLookupRow(props);
+    setSiteCoords(null);
+    setSiteNearestPostcode(null);
 
-const lsoaCode = props.lsoa21cd;
-const lsoaMatch =
-  lsoa.features.find((f: any) => getFeatureLsoaCode(f.properties) === lsoaCode) ||
-  findLsoaByPoint(lsoa, Number(props.long), Number(props.lat));
+    const lsoaCode = props.lsoa21cd;
+    const lsoaMatch =
+      lsoa.features.find((f: any) => getFeatureLsoaCode(f.properties) === lsoaCode) ||
+      findLsoaByPoint(lsoa, Number(props.long), Number(props.lat));
 
-applySelectedFeature(lsoaMatch, {
-  lng: Number(props.long),
-  lat: Number(props.lat),
-});
+    applySelectedFeature(lsoaMatch, {
+      lng: Number(props.long),
+      lat: Number(props.lat),
+    });
   }
 
   useEffect(() => {
     if (!siteCoords || !lsoa || !lookup) return;
 
     const lsoaMatch = findLsoaByPoint(lsoa, siteCoords.lng, siteCoords.lat);
-    const nearestPostcode = findClosestPostcode(
-      lookup,
-      siteCoords.lat,
-      siteCoords.lng
-    );
+    const nearestPostcode = findClosestPostcode(lookup, siteCoords.lat, siteCoords.lng);
 
     setSelectedLookupRow(null);
     setSiteNearestPostcode(nearestPostcode);
@@ -587,10 +539,7 @@ applySelectedFeature(lsoaMatch, {
     [poiToggles]
   );
 
-  const recommendedAssets = useMemo(
-    () => recommendedAssetsFromThemes(top),
-    [top]
-  );
+  const recommendedAssets = useMemo(() => recommendedAssetsFromThemes(top), [top]);
 
   const hasSelection = Boolean(selectedLookupRow || siteCoords || scores);
 
@@ -598,35 +547,30 @@ applySelectedFeature(lsoaMatch, {
     lookupMode === "postcode"
       ? selectedLookupRow?.postcode || "No postcode selected"
       : siteCoords
-      ? `Site${siteNearestPostcode ? ` (${siteNearestPostcode})` : ""}`
-      : "No site selected";
+        ? `Site${siteNearestPostcode ? ` (${siteNearestPostcode})` : ""}`
+        : "No site selected";
 
   const scoreCards = scores
     ? [
         {
-          label: "Economic Inclusion",
-          value: scores.economicInclusion,
-          toms: "NT1, NT2, NT10",
+          label: "Work",
+          value: scores.work,
+          detail: "Employment, skills and pathways into work",
         },
         {
-          label: "Skills And Progression",
-          value: scores.skillsOpportunity,
-          toms: "NT11, NT12, NT13",
+          label: "Economy",
+          value: scores.economy,
+          detail: "Inclusive growth and local economic participation",
         },
         {
-          label: "Health And Wellbeing",
-          value: scores.healthWellbeing,
-          toms: "NT17, NT18",
+          label: "Community",
+          value: scores.community,
+          detail: "Wellbeing, resilience and access to essentials",
         },
         {
-          label: "Household Resilience",
-          value: scores.householdResilience,
-          toms: "NT18, NT19",
-        },
-        {
-          label: "Environmental Sustainability",
-          value: scores.environmentalSustainability,
-          toms: "NT30, NT31, NT33",
+          label: "Planet",
+          value: scores.planet,
+          detail: "Biodiversity, greenspace and environmental value",
         },
       ]
     : [];
@@ -635,19 +579,19 @@ applySelectedFeature(lsoaMatch, {
     if (!asset.key) return;
 
     const key = asset.key;
-
     setPoiToggles((prev) => ({
       ...prev,
       [key]: !prev[key],
     }));
-
     setMapPanelTab("partners");
   }
 
   const baseButtonClass =
-    "rounded-xl px-4 py-2.5 text-sm font-medium transition-colors";
+    "rounded-xl px-4 py-2.5 text-sm font-medium transition-colors focus:outline-none";
   const activeButtonStyle = { background: "#00285B", color: "white" };
   const inactiveButtonStyle = { background: "#2fa4df", color: "white" };
+  const calloutClass = "rounded-xl bg-slate-50 p-4 text-sm text-black";
+  const mutedTextClass = "text-sm text-black";
 
   return (
     <main
@@ -668,7 +612,7 @@ applySelectedFeature(lsoaMatch, {
                 Social Value Opportunity Checker
               </h1>
               <div className="mt-1 text-sm text-black md:text-base">
-                Powered by MapHorizon Geospatial Intelligence
+                National TOMs 2025 screening aligned to Work, Economy, Community and Planet.
               </div>
             </div>
           </div>
@@ -680,11 +624,7 @@ applySelectedFeature(lsoaMatch, {
               type="button"
               onClick={() => setLookupMode("postcode")}
               className={`${baseButtonClass} w-full sm:w-auto`}
-              style={
-                lookupMode === "postcode"
-                  ? activeButtonStyle
-                  : inactiveButtonStyle
-              }
+              style={lookupMode === "postcode" ? activeButtonStyle : inactiveButtonStyle}
             >
               Postcode Lookup
             </button>
@@ -693,9 +633,7 @@ applySelectedFeature(lsoaMatch, {
               type="button"
               onClick={() => setLookupMode("site")}
               className={`${baseButtonClass} w-full sm:w-auto`}
-              style={
-                lookupMode === "site" ? activeButtonStyle : inactiveButtonStyle
-              }
+              style={lookupMode === "site" ? activeButtonStyle : inactiveButtonStyle}
             >
               Site Lookup
             </button>
@@ -724,15 +662,14 @@ applySelectedFeature(lsoaMatch, {
               </button>
             </form>
           ) : (
-            <div className="rounded-xl bg-slate-50 px-4 py-4 text-sm text-slate-700">
-              Click anywhere on the map to select a site location and run
-              screening.
+            <div className={calloutClass}>
+              Click anywhere on the map to select a site location and run screening.
             </div>
           )}
         </div>
 
         {loading && (
-          <div className="w-full rounded-2xl bg-white p-4 shadow-md md:p-6">
+          <div className="w-full rounded-2xl bg-white p-4 shadow-md md:p-6 text-black">
             Loading data...
           </div>
         )}
@@ -760,11 +697,7 @@ applySelectedFeature(lsoaMatch, {
                     type="button"
                     onClick={() => setMapPanelTab("layers")}
                     className={`${baseButtonClass} w-full sm:w-auto`}
-                    style={
-                      mapPanelTab === "layers"
-                        ? activeButtonStyle
-                        : inactiveButtonStyle
-                    }
+                    style={mapPanelTab === "layers" ? activeButtonStyle : inactiveButtonStyle}
                   >
                     Layers
                   </button>
@@ -773,11 +706,7 @@ applySelectedFeature(lsoaMatch, {
                     type="button"
                     onClick={() => setMapPanelTab("partners")}
                     className={`${baseButtonClass} w-full sm:w-auto`}
-                    style={
-                      mapPanelTab === "partners"
-                        ? activeButtonStyle
-                        : inactiveButtonStyle
-                    }
+                    style={mapPanelTab === "partners" ? activeButtonStyle : inactiveButtonStyle}
                   >
                     Local Partners
                   </button>
@@ -803,47 +732,41 @@ applySelectedFeature(lsoaMatch, {
                           type="button"
                           onClick={() => setMapLayer(value as MapLayer)}
                           className={baseButtonClass}
-                          style={
-                            mapLayer === value
-                              ? activeButtonStyle
-                              : inactiveButtonStyle
-                          }
+                          style={mapLayer === value ? activeButtonStyle : inactiveButtonStyle}
                         >
                           {label}
                         </button>
                       ))}
                     </div>
 
-                    <div className="mt-3 rounded-xl bg-slate-50 px-3 py-3 text-slate-700">
+                    <div className="mt-3 rounded-xl bg-slate-50 px-3 py-3 text-black">
                       <strong>Layer Description:</strong> {layerDescription(mapLayer)}
                     </div>
 
-                    <div className="mt-4">
-                      <strong className="text-black">Legend</strong>
+                    <div className="mt-4 text-black">
+                      <strong>Legend</strong>
 
                       {mapLayer !== "none" && (
                         <div className="mt-3">
-                          <div className="mb-2 font-semibold text-black">
-                            Map Legend
-                          </div>
+                          <div className="mb-2 font-semibold text-black">Map Legend</div>
 
-                          <div className="flex flex-wrap gap-3">
-                            {(mapLayer === "imd" ||
-                              mapLayer === "income" ||
-                              mapLayer === "employment" ||
-                              mapLayer === "education" ||
-                              mapLayer === "health") && (
+                          <div className="flex flex-wrap gap-3 text-black">
+                            {[
+                              "imd",
+                              "income",
+                              "employment",
+                              "education",
+                              "health",
+                            ].includes(mapLayer) && (
                               <>
                                 <span>
-                                  <span style={{ color: "#7f1d1d" }}>■</span> Higher
-                                  Need
+                                  <span style={{ color: "#7f1d1d" }}>■</span> Higher Need
                                 </span>
                                 <span>
                                   <span style={{ color: "#f97316" }}>■</span> Medium
                                 </span>
                                 <span>
-                                  <span style={{ color: "#22c55e" }}>■</span> Lower
-                                  Need
+                                  <span style={{ color: "#22c55e" }}>■</span> Lower Need
                                 </span>
                               </>
                             )}
@@ -865,15 +788,13 @@ applySelectedFeature(lsoaMatch, {
                             {mapLayer === "jobs" && (
                               <>
                                 <span>
-                                  <span style={{ color: "#7f1d1d" }}>■</span> Poor
-                                  Access
+                                  <span style={{ color: "#7f1d1d" }}>■</span> Poor Access
                                 </span>
                                 <span>
                                   <span style={{ color: "#facc15" }}>■</span> Medium
                                 </span>
                                 <span>
-                                  <span style={{ color: "#16a34a" }}>■</span> Better
-                                  Access
+                                  <span style={{ color: "#16a34a" }}>■</span> Better Access
                                 </span>
                               </>
                             )}
@@ -886,11 +807,10 @@ applySelectedFeature(lsoaMatch, {
                           <div className="mb-2 font-semibold text-black">
                             Community Asset Legend
                           </div>
-                          <div className="flex flex-wrap gap-3">
+                          <div className="flex flex-wrap gap-3 text-black">
                             {activePoiLegend.map((item) => (
                               <span key={item.label}>
-                                <span style={{ color: item.color }}>●</span>{" "}
-                                {item.label}
+                                <span style={{ color: item.color }}>●</span> {item.label}
                               </span>
                             ))}
                           </div>
@@ -898,9 +818,8 @@ applySelectedFeature(lsoaMatch, {
                       )}
 
                       {mapLayer === "none" && activePoiLegend.length === 0 && (
-                        <div className="mt-2 text-slate-600">
-                          Turn on a map layer or community asset to populate the
-                          legend.
+                        <div className="mt-2 text-black">
+                          Turn on a map layer or community asset to populate the legend.
                         </div>
                       )}
                     </div>
@@ -912,10 +831,9 @@ applySelectedFeature(lsoaMatch, {
                     {hasSelection ? (
                       <>
                         <strong className="text-black">Local Partners</strong>
-                        <div className="mt-2 text-sm text-slate-600">
-                          Based on the strongest local themes, these are the most
-                          relevant assets to review and, where appropriate, turn on
-                          in the map.
+                        <div className="mt-2 text-sm text-black">
+                          Based on the strongest local themes, these are the most relevant
+                          assets to review and, where appropriate, turn on in the map.
                         </div>
 
                         <div className="mt-3 space-y-3">
@@ -930,12 +848,8 @@ applySelectedFeature(lsoaMatch, {
                               >
                                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                   <div>
-                                    <div className="font-semibold text-black">
-                                      {asset.label}
-                                    </div>
-                                    <div className="mt-1 text-sm text-slate-600">
-                                      {asset.reason}
-                                    </div>
+                                    <div className="font-semibold text-black">{asset.label}</div>
+                                    <div className="mt-1 text-sm text-black">{asset.reason}</div>
                                   </div>
 
                                   {isToggleable ? (
@@ -950,7 +864,7 @@ applySelectedFeature(lsoaMatch, {
                                       {isOn ? "Hide On Map" : "Show On Map"}
                                     </button>
                                   ) : (
-                                    <div className="w-full shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-center text-xs text-slate-500 sm:w-auto">
+                                    <div className="w-full shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-center text-xs text-black sm:w-auto">
                                       Reference Layer
                                     </div>
                                   )}
@@ -960,15 +874,14 @@ applySelectedFeature(lsoaMatch, {
                           })}
                         </div>
 
-                        <div className="mt-3 text-sm text-slate-600">
+                        <div className="mt-3 text-sm text-black">
                           This links <strong>priority themes</strong> to
-                          <strong> local delivery assets</strong>, making the output
-                          more practical for TOMS-aligned interventions,
-                          partnerships and bids.
+                          <strong> local delivery assets</strong>, making the output more
+                          practical for TOMs-aligned interventions, partnerships and bids.
                         </div>
                       </>
                     ) : (
-                      <div className="rounded-xl bg-slate-50 p-4 text-sm text-slate-700">
+                      <div className={calloutClass}>
                         Select a postcode or site to populate local partners.
                       </div>
                     )}
@@ -994,8 +907,7 @@ applySelectedFeature(lsoaMatch, {
                       </div>
                       <div>
                         IMD Decile:{" "}
-                        {selectedLookupRow?.imd_decile ??
-                          selectedLsoaProps?.["IMD Decile"]}
+                        {selectedLookupRow?.imd_decile ?? selectedLsoaProps?.["IMD Decile"]}
                       </div>
                     </>
                   ) : (
@@ -1008,16 +920,14 @@ applySelectedFeature(lsoaMatch, {
                             selectedLsoaProps?.["LSOA11CD"]}
                         </div>
                       )}
-                      {siteNearestPostcode && (
-                        <div>Nearest postcode: {siteNearestPostcode}</div>
-                      )}
+                      {siteNearestPostcode && <div>Nearest postcode: {siteNearestPostcode}</div>}
                     </>
                   )}
                 </div>
               )}
 
               {!scores && (
-                <div className="rounded-xl bg-slate-50 p-4 text-sm text-slate-700">
+                <div className={calloutClass}>
                   {lookupMode === "postcode"
                     ? "Enter a postcode and run the lookup."
                     : "Click a site location on the map to run screening."}
@@ -1026,16 +936,11 @@ applySelectedFeature(lsoaMatch, {
 
               {scores && (
                 <>
-                  <div
-                    style={{ background: "#00285B" }}
-                    className="mb-4 rounded-xl p-4 text-white"
-                  >
+                  <div style={{ background: "#00285B" }} className="mb-4 rounded-xl p-4 text-white">
                     <div className="text-sm font-medium uppercase tracking-wide text-blue-100">
                       Overall Materiality
                     </div>
-                    <div className="mt-1 text-3xl font-bold">
-                      {scores.overallMateriality}/100
-                    </div>
+                    <div className="mt-1 text-3xl font-bold">{scores.overallMateriality}/100</div>
                     <div className="mt-1 text-sm">{band(scores.overallMateriality)}</div>
                   </div>
 
@@ -1053,9 +958,7 @@ applySelectedFeature(lsoaMatch, {
                           <div className="mt-1 text-xl font-bold text-black md:text-2xl">
                             {card.value}
                           </div>
-                          <div className="mt-1 text-xs text-slate-600">
-                            TOMS: {card.toms}
-                          </div>
+                          <div className="mt-1 text-xs text-black">{card.detail}</div>
                         </div>
                       ))}
                     </div>
@@ -1066,141 +969,98 @@ applySelectedFeature(lsoaMatch, {
                     <ul className="mt-2 list-disc pl-5 text-black">
                       {top.map((t) => (
                         <li key={t.name}>
-                          {t.name} ({t.value}) —{" "}
-                          <span className="text-slate-600">TOMS {t.toms}</span>
+                          {t.name} ({t.value})
                         </li>
                       ))}
                     </ul>
                   </div>
 
-                  <div className="mb-4">
+                  <div className="mb-5">
                     <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                       <button
                         type="button"
-                        onClick={() => setDetailTab("toms")}
+                        onClick={() => setDetailTab("themes")}
                         className={`${baseButtonClass} w-full sm:w-auto`}
-                        style={
-                          detailTab === "toms"
-                            ? activeButtonStyle
-                            : inactiveButtonStyle
-                        }
+                        style={detailTab === "themes" ? activeButtonStyle : inactiveButtonStyle}
                       >
-                        TOMS
+                        Theme Detail
                       </button>
-
                       <button
                         type="button"
                         onClick={() => setDetailTab("why")}
                         className={`${baseButtonClass} w-full sm:w-auto`}
-                        style={
-                          detailTab === "why"
-                            ? activeButtonStyle
-                            : inactiveButtonStyle
-                        }
+                        style={detailTab === "why" ? activeButtonStyle : inactiveButtonStyle}
                       >
                         Why It Matters
                       </button>
-
                       <button
                         type="button"
                         onClick={() => setDetailTab("actions")}
                         className={`${baseButtonClass} w-full sm:w-auto`}
-                        style={
-                          detailTab === "actions"
-                            ? activeButtonStyle
-                            : inactiveButtonStyle
-                        }
+                        style={detailTab === "actions" ? activeButtonStyle : inactiveButtonStyle}
                       >
-                        Actions
+                        Suggested Actions
                       </button>
-
                       <button
                         type="button"
                         onClick={() => setDetailTab("method")}
                         className={`${baseButtonClass} w-full sm:w-auto`}
-                        style={
-                          detailTab === "method"
-                            ? activeButtonStyle
-                            : inactiveButtonStyle
-                        }
+                        style={detailTab === "method" ? activeButtonStyle : inactiveButtonStyle}
                       >
-                        Method
+                        Method Summary
                       </button>
                     </div>
 
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                      {detailTab === "toms" && (
-                        <div>
-                          <strong className="text-black">TOMS Alignment</strong>
-                          <div className="mt-3 overflow-x-auto">
-                            <table className="w-full min-w-[420px] border-collapse text-sm">
-                              <thead>
-                                <tr className="bg-slate-100">
-                                  <th className="border border-slate-200 p-2 text-left text-black">
-                                    Theme
-                                  </th>
-                                  <th className="border border-slate-200 p-2 text-left text-black">
-                                    TOMS Codes
-                                  </th>
-                                  <th className="border border-slate-200 p-2 text-left text-black">
-                                    Score
-                                  </th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {top.map((t) => (
-                                  <tr key={t.name}>
-                                    <td className="border border-slate-200 p-2 text-black">
-                                      {t.name}
-                                    </td>
-                                    <td className="border border-slate-200 p-2 text-black">
-                                      {t.toms}
-                                    </td>
-                                    <td className="border border-slate-200 p-2 text-black">
-                                      {t.value}
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-black">
+                      {detailTab === "themes" && (
+                        <div className="space-y-3">
+                          {top.map((item) => (
+                            <div key={item.name} className="rounded-xl bg-white p-3">
+                              <div className="flex items-start justify-between gap-3">
+                                <div>
+                                  <div className="font-semibold text-black">{item.name}</div>
+                                  <div className="text-sm text-black">National TOMs 2025 theme</div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-xl font-bold text-black">{item.value}</div>
+                                  <div className="text-xs text-black">{band(item.value)}</div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       )}
 
                       {detailTab === "why" && (
-                        <div>
-                          <strong className="text-black">
-                            Why This Theme Matters Locally
-                          </strong>
-                          <ul className="mt-3 list-disc pl-5 text-black">
-                            {top.map((t) => (
-                              <li key={t.name}>
-                                <strong>{t.name}:</strong> {t.why}
-                              </li>
-                            ))}
-                          </ul>
+                        <div className="space-y-3">
+                          {top.map((item) => (
+                            <div key={item.name} className="rounded-xl bg-white p-3">
+                              <div className="font-semibold text-black">{item.name}</div>
+                              <p className="mt-1 text-sm text-black">{item.why}</p>
+                            </div>
+                          ))}
                         </div>
                       )}
 
                       {detailTab === "actions" && (
-                        <div>
-                          <strong className="text-black">
-                            Suggested Interventions
-                          </strong>
-                          <ul className="mt-3 list-disc pl-5 text-black">
-                            {top.flatMap((t) => t.actions).map((a, i) => (
-                              <li key={i}>{a}</li>
-                            ))}
-                          </ul>
+                        <div className="space-y-3">
+                          {top.map((item) => (
+                            <div key={item.name} className="rounded-xl bg-white p-3">
+                              <div className="font-semibold text-black">{item.name}</div>
+                              <ul className="mt-2 list-disc pl-5 text-sm text-black">
+                                {item.actions.map((action) => (
+                                  <li key={action}>{action}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          ))}
                         </div>
                       )}
 
                       {detailTab === "method" && (
-                        <div>
+                        <>
                           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <strong className="text-black">
-                              How This Score Is Calculated
-                            </strong>
+                            <strong className="text-black">How This Score Is Calculated</strong>
                             <button
                               type="button"
                               onClick={() => setShowMethodology(!showMethodology)}
@@ -1212,76 +1072,107 @@ applySelectedFeature(lsoaMatch, {
                           </div>
 
                           <p className="mt-3 text-sm text-black">
-                            The Overall Materiality Score is an indicative
-                            screening score out of 100. It combines five themes
-                            aligned to TOMS-related social and environmental
-                            outcomes.
+                            The Overall Materiality Score is an indicative screening score
+                            out of 100. It uses the National TOMs 2025 structure and ranks
+                            the relative relevance of four themes: Work, Economy, Community
+                            and Planet.
                           </p>
 
                           {showMethodology && (
                             <>
                               <ul className="mt-3 list-disc pl-5 text-sm text-black">
                                 <li>
-                                  <strong>Economic Inclusion</strong> — Income
-                                  deprivation, employment deprivation, and access
-                                  to employment within 30 minutes.
+                                  <strong>Work</strong> combines employment deprivation,
+                                  education and skills deprivation, and access to employment
+                                  within 30 minutes.
                                 </li>
                                 <li>
-                                  <strong>Skills And Progression</strong> —
-                                  Education, skills and training deprivation and
-                                  employment conditions.
+                                  <strong>Economy</strong> combines income deprivation,
+                                  employment conditions and access to employment as a proxy for
+                                  local economic participation.
                                 </li>
                                 <li>
-                                  <strong>Health And Wellbeing</strong> — Health
-                                  deprivation and disability and access to GPs
-                                  within 15 minutes.
+                                  <strong>Community</strong> combines health deprivation, fuel
+                                  poverty, GP access and access to food stores as a proxy for
+                                  wellbeing and resilience.
                                 </li>
                                 <li>
-                                  <strong>Household Resilience</strong> — Fuel
-                                  poverty, income pressures, and access to food
-                                  stores within 15 minutes.
-                                </li>
-                                <li>
-                                  <strong>Environmental Sustainability</strong> —
-                                  Screening indicator based on local greenspace
-                                  presence and priority habitat presence.
+                                  <strong>Planet</strong> is a screening indicator based on
+                                  local greenspace presence and priority habitat presence.
                                 </li>
                               </ul>
 
                               <p className="mt-3 text-sm text-black">
                                 <strong>Weighting</strong>
                                 <br />
-                                Economic Inclusion 25%
+                                Work 30%
                                 <br />
-                                Skills And Progression 20%
+                                Economy 25%
                                 <br />
-                                Health And Wellbeing 20%
+                                Community 30%
                                 <br />
-                                Household Resilience 20%
-                                <br />
-                                Environmental Sustainability 15%
+                                Planet 15%
                               </p>
 
                               <p className="mt-3 text-sm text-black">
-                                <strong>Environmental Theme Logic</strong>
+                                <strong>Work Logic</strong>
                                 <br />
-                                `has_greenspace = 1` contributes a moderate
-                                positive environmental relevance score.
+                                Employment deprivation contributes most strongly, followed by
+                                education and skills deprivation, then employment access.
+                              </p>
+
+                              <p className="mt-3 text-sm text-black">
+                                <strong>Economy Logic</strong>
                                 <br />
-                                `has_priority_habitat = 1` contributes a stronger
+                                Income deprivation drives the score most strongly, with
+                                employment conditions and access acting as supporting signals.
+                              </p>
+
+                              <p className="mt-3 text-sm text-black">
+                                <strong>Community Logic</strong>
+                                <br />
+                                Health pressures, fuel poverty and access to core services are
+                                combined to show where wellbeing and resilience interventions
+                                may be most material.
+                              </p>
+
+                              <p className="mt-3 text-sm text-black">
+                                <strong>Planet Logic</strong>
+                                <br />
+                                <code>has_greenspace = 1</code> contributes a moderate
+                                environmental relevance score.
+                                <br />
+                                <code>has_priority_habitat = 1</code> contributes a stronger
                                 biodiversity relevance score.
+                              </p>
+
+                              <p className="mt-3 text-sm text-black">
+                                <strong>Top Theme Bonus</strong>
+                                <br />
+                                A small uplift is added where one theme scores very strongly,
+                                so high-priority places stand out more clearly in early-stage
+                                screening.
                               </p>
                             </>
                           )}
 
-                          <p className="mt-3 text-sm text-slate-600">
-                            Higher scores indicate themes are more likely to be
-                            materially relevant in the selected area. This
-                            supports early-stage screening, targeting and
-                            TOMS-aligned intervention planning.
+                          <p className="mt-3 text-sm text-black">
+                            Higher scores indicate themes are more likely to be materially
+                            relevant in the selected area. This supports early-stage
+                            screening, targeting and TOMs-aligned intervention planning. It
+                            does not directly measure social value delivered.
                           </p>
-                        </div>
+                        </>
                       )}
+                    </div>
+                  </div>
+
+                  <div className={calloutClass}>
+                    <strong>Interpretation</strong>
+                    <div className="mt-2 text-sm text-black">
+                      Use this output to identify which National TOMs themes appear most
+                      material locally, then shape delivery activity, partner selection and
+                      bid narrative around the highest-ranked themes.
                     </div>
                   </div>
                 </>
