@@ -109,12 +109,7 @@ function calcScores(p: Record<string, unknown>): Scores {
   const community = health * 0.35 + fuel * 0.25 + gp * 0.2 + food * 0.2;
   const planet = environmentalScore(p);
 
-  const topThemeBonus = Math.max(work, economy, community, planet) >= 75 ? 5 : 0;
-
-  const overallMateriality = Math.min(
-    100,
-    work * 0.3 + economy * 0.25 + community * 0.3 + planet * 0.15 + topThemeBonus
-  );
+  const overallMateriality = (work + economy + community + planet) / 4;
 
   return {
     work: Math.round(work),
@@ -1075,7 +1070,7 @@ export default function Page() {
                             The Overall Materiality Score is an indicative screening score
                             out of 100. It uses the National TOMs 2025 structure and ranks
                             the relative relevance of four themes: Work, Economy, Community
-                            and Planet.
+                            and Planet. Each theme contributes 25% to the final score.
                           </p>
 
                           {showMethodology && (
@@ -1105,13 +1100,16 @@ export default function Page() {
                               <p className="mt-3 text-sm text-black">
                                 <strong>Weighting</strong>
                                 <br />
-                                Work 30%
+                                Each theme contributes equally to the Overall Materiality
+                                Score.
+                                <br />
+                                Work 25%
                                 <br />
                                 Economy 25%
                                 <br />
-                                Community 30%
+                                Community 25%
                                 <br />
-                                Planet 15%
+                                Planet 25%
                               </p>
 
                               <p className="mt-3 text-sm text-black">
@@ -1147,11 +1145,12 @@ export default function Page() {
                               </p>
 
                               <p className="mt-3 text-sm text-black">
-                                <strong>Top Theme Bonus</strong>
+                                <strong>Overall Score Logic</strong>
                                 <br />
-                                A small uplift is added where one theme scores very strongly,
-                                so high-priority places stand out more clearly in early-stage
-                                screening.
+                                The Overall Materiality Score is the simple average of the
+                                Work, Economy, Community and Planet scores. No additional
+                                weighting or uplift is applied, so each theme has the same
+                                influence on the final score.
                               </p>
                             </>
                           )}
